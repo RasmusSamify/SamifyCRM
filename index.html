@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Samify CRM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#09090f;--surf:#0d0d1a;--card:#121220;--border:#1c1c30;--border2:#242440;--acc:#f0a020;--acc2:rgba(240,160,32,.12);--pur:#8b80ff;--pur2:rgba(139,128,255,.11);--txt:#ddddf5;--dim:#6a6a98;--faint:#2e2e50;--ok:#34d399;--warn:#fbbf24;--err:#f87171;--r:10px}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);display:flex;height:100vh}
+
+/* SIDEBAR */
+.side{width:224px;min-width:224px;background:var(--surf);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:0;height:100vh;position:fixed;left:0;top:0;z-index:100;transition:transform .28s cubic-bezier(.4,0,.2,1)}
+.logo-area{padding:20px 18px 18px;border-bottom:1px solid var(--border)}
+.logo-name{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--acc);letter-spacing:-.4px}
+.logo-sub{font-size:9.5px;color:var(--dim);text-transform:uppercase;letter-spacing:2px;margin-top:3px}
+.nav-wrap{flex:1;overflow-y:auto;padding:10px 0}
+.nav-sec{padding:0 10px;margin-bottom:4px}
+.nav-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--faint);padding:10px 10px 5px}
+.ni{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;color:var(--dim);font-size:13.5px;font-weight:500;transition:all .12s;user-select:none}
+.ni:hover{background:var(--border);color:var(--txt)}
+.ni.on{background:var(--acc2);color:var(--acc)}
+.ni svg{width:15px;height:15px;flex-shrink:0;opacity:.65}
+.ni.on svg{opacity:1}
+.nbadge{margin-left:auto;background:var(--err);color:#fff;font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:20px}
+.nbadge.ok{background:var(--ok);color:#000}
+.side-footer{padding:14px 16px;border-top:1px solid var(--border)}
+.side-version{font-size:10px;color:var(--faint)}
+
+/* MAIN */
+.main{margin-left:224px;flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;min-width:0}
+.topbar{background:var(--surf);border-bottom:1px solid var(--border);height:54px;display:flex;align-items:center;padding:0 22px;gap:14px;flex-shrink:0}
+.topbar-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar-r{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ai-pill{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ok);background:rgba(52,211,153,.09);padding:4px 10px;border-radius:20px;white-space:nowrap}
+.ai-dot{width:5px;height:5px;background:var(--ok);border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.ava{width:31px;height:31px;border-radius:50%;background:var(--acc2);border:2px solid var(--acc);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:10.5px;font-weight:800;color:var(--acc);flex-shrink:0}
+.mbtn{display:none;width:32px;height:32px;background:var(--border);border:none;border-radius:7px;cursor:pointer;color:var(--txt);font-size:16px;align-items:center;justify-content:center;flex-shrink:0}
+
+.content{flex:1;overflow-y:auto;padding:22px;min-width:0}
+
+/* STAT GRID */
+.sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.scard{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:17px 18px;position:relative;overflow:hidden;transition:border-color .15s}
+.scard:hover{border-color:var(--border2)}
+.scard::after{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.scard.c-acc::after{background:var(--acc)}
+.scard.c-pur::after{background:var(--pur)}
+.scard.c-ok::after{background:var(--ok)}
+.scard.c-warn::after{background:var(--warn)}
+.slabel{font-size:9.5px;text-transform:uppercase;letter-spacing:1.3px;color:var(--dim);font-weight:700;margin-bottom:8px}
+.sval{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:500;letter-spacing:-1px;line-height:1}
+.sdelta{font-size:11px;margin-top:6px;color:var(--dim)}
+.sdelta.up{color:var(--ok)}.sdelta.dn{color:var(--err)}
+
+/* LAYOUT GRIDS */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+
+/* CARD */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:0}
+.card-hd{padding:13px 17px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.card-ht{font-family:'Syne',sans-serif;font-size:12.5px;font-weight:700;letter-spacing:.2px}
+.card-body{padding:15px 17px}
+
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:9.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--dim);padding:9px 13px;border-bottom:1px solid var(--border);font-weight:700}
+.tbl td{padding:11px 13px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tbody tr:hover td{background:rgba(255,255,255,.018)}
+
+/* BADGE */
+.bdg{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;white-space:nowrap}
+.bdg-ok{background:rgba(52,211,153,.11);color:var(--ok)}
+.bdg-warn{background:rgba(251,191,36,.11);color:var(--warn)}
+.bdg-err{background:rgba(248,113,113,.11);color:var(--err)}
+.bdg-info{background:var(--pur2);color:var(--pur)}
+.bdg-neu{background:var(--border);color:var(--dim)}
+.bdg-acc{background:var(--acc2);color:var(--acc)}
+
+/* BUTTONS */
+.btn{padding:7px 13px;border-radius:7px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:600;transition:all .12s;white-space:nowrap}
+.btn-p{background:var(--acc);color:#000}.btn-p:hover{filter:brightness(1.1)}
+.btn-g{background:transparent;color:var(--dim);border:1px solid var(--border)}.btn-g:hover{color:var(--txt);border-color:var(--border2)}
+.btn-sm{padding:5px 10px;font-size:11.5px}
+.btn-pur{background:var(--pur2);color:var(--pur);border:none}.btn-pur:hover{background:rgba(139,128,255,.2)}
+
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:16px;gap:0;overflow-x:auto}
+.tab{padding:9px 15px;font-size:13px;font-weight:500;color:var(--dim);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .12s;white-space:nowrap;flex-shrink:0}
+.tab:hover{color:var(--txt)}.tab.on{color:var(--acc);border-color:var(--acc)}
+
+/* DROP ZONE */
+.dz{border:2px dashed var(--border2);border-radius:var(--r);padding:32px;text-align:center;cursor:pointer;transition:all .18s;margin-bottom:16px}
+.dz:hover,.dz.over{border-color:var(--acc);background:var(--acc2)}
+.dz-ico{font-size:26px;margin-bottom:10px;opacity:.45}
+.dz-t{font-size:13px;color:var(--dim);line-height:1.6}
+.dz-t b{color:var(--acc)}
+
+/* KANBAN */
+.kb-board{display:flex;gap:10px;overflow-x:auto;height:calc(100vh - 156px);padding-bottom:10px}
+.kb-col{min-width:215px;max-width:215px;background:var(--surf);border:1px solid var(--border);border-radius:var(--r);display:flex;flex-direction:column;max-height:100%}
+.kb-hd{padding:11px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.kb-ht{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.8px}
+.kb-cnt{font-size:10px;color:var(--dim);background:var(--border);padding:2px 6px;border-radius:10px}
+.kb-cards{padding:7px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px}
+.kb-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:11px;cursor:pointer;transition:border-color .12s}
+.kb-card:hover{border-color:var(--acc)}
+.kb-co{font-size:12.5px;font-weight:700;margin-bottom:2px}
+.kb-ct{font-size:11px;color:var(--dim);margin-bottom:7px}
+.kb-note{font-size:10.5px;color:var(--dim);line-height:1.5;margin-bottom:7px}
+.kb-val{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--acc);font-weight:500}
+.kb-dt{font-size:9.5px;color:var(--faint);margin-top:6px}
+.kb-footer{padding:7px;border-top:1px solid var(--border);flex-shrink:0}
+
+/* CALENDAR */
+.cal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px}
+.cal-month{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;min-width:160px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;gap:1px;background:var(--border)}
+.cal-dh{background:var(--surf);padding:8px;text-align:center;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--dim)}
+.cal-d{background:var(--card);min-height:80px;padding:6px;cursor:pointer;transition:background .1s}
+.cal-d:hover{background:var(--surf)}.cal-d.today{background:var(--acc2)}.cal-d.om{opacity:.25}
+.cal-dn{font-size:11px;font-weight:600;font-family:'JetBrains Mono',monospace;margin-bottom:3px}
+.cal-ev{background:var(--pur2);border-left:2px solid var(--pur);padding:1px 4px;border-radius:2px;font-size:9px;color:var(--pur);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-ev.pay{background:var(--acc2);border-color:var(--acc);color:var(--acc)}
+
+/* TIMELINE */
+.tl{display:flex;flex-direction:column;gap:7px}
+.tl-item{display:flex;align-items:center;gap:11px;padding:10px;border-radius:8px;background:var(--surf);border:1px solid var(--border)}
+.tl-date{min-width:34px;text-align:center;flex-shrink:0}
+.tl-day{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:500;color:var(--acc);line-height:1}
+.tl-mon{font-size:8.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim)}
+.tl-info{flex:1;min-width:0}
+.tl-cl{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-ds{font-size:10.5px;color:var(--dim);margin-top:1px}
+.tl-am{font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:500;white-space:nowrap;text-align:right}
+
+/* BARS */
+.bars{display:flex;align-items:flex-end;gap:5px;height:100px;padding:6px 0}
+.bar-w{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
+.bar{width:100%;background:linear-gradient(to top,var(--acc),rgba(240,160,32,.4));border-radius:3px 3px 0 0;min-height:3px;transition:opacity .2s}
+.bar:hover{opacity:.8}
+.bar-l{font-size:9px;color:var(--faint);font-family:'JetBrains Mono',monospace}
+
+/* AI CHAT */
+.ai-chat-box{display:flex;flex-direction:column;height:360px;overflow:hidden}
+.ai-msgs{flex:1;overflow-y:auto;padding:13px;display:flex;flex-direction:column;gap:9px}
+.ai-m{max-width:90%;padding:9px 12px;border-radius:10px;font-size:13px;line-height:1.65}
+.ai-m.bot{background:var(--surf);border:1px solid var(--border);align-self:flex-start;border-bottom-left-radius:3px}
+.ai-m.usr{background:var(--acc2);border:1px solid rgba(240,160,32,.25);align-self:flex-end;border-bottom-right-radius:3px;color:var(--acc)}
+.ai-inp-row{display:flex;gap:7px;padding:9px 12px;border-top:1px solid var(--border);background:var(--card);flex-shrink:0}
+.ai-inp{flex:1;background:var(--surf);border:1px solid var(--border);border-radius:7px;padding:8px 12px;color:var(--txt);font-family:'DM Sans',sans-serif;font-size:13px;outline:none}
+.ai-inp:focus{border-color:var(--acc)}.ai-inp::placeholder{color:var(--faint)}
+
+/* CUSTOMERS */
+.cu-wrap{display:grid;grid-template-columns:198px 1fr;gap:14px;height:calc(100vh - 144px)}
+.cu-list{background:var(--surf);border:1px solid var(--border);border-radius:var(--r);overflow-y:auto}
+.cu-item{padding:12px 13px;border-bottom:1px solid var(--border);cursor:pointer;transition:all .1s}
+.cu-item:last-child{border-bottom:none}
+.cu-item:hover{background:var(--border)}
+.cu-item.on{background:var(--acc2);border-left:3px solid var(--acc)}
+.cu-name{font-size:12.5px;font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cu-mrr{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--acc)}
+
+/* PROGRESS */
+.prog{height:5px;background:var(--border2);border-radius:3px;overflow:hidden;margin-top:5px}
+.prog-f{height:100%;background:linear-gradient(to right,var(--acc),#ffc840);border-radius:3px;transition:width .6s ease}
+
+/* CONTRACT CARD */
+.cc{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:15px;margin-bottom:10px;transition:border-color .12s}
+.cc:hover{border-color:var(--border2)}
+.cc-name{font-family:'Syne',sans-serif;font-size:14.5px;font-weight:700;margin-bottom:2px}
+.cc-meta{display:flex;flex-wrap:wrap;gap:14px;margin:10px 0}
+.cc-mk{display:flex;flex-direction:column;gap:2px}
+.cc-ml{font-size:9px;text-transform:uppercase;letter-spacing:.6px;color:var(--faint)}
+.cc-mv{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--txt)}
+
+/* SECTION HEADER */
+.shd{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;flex-wrap:wrap;gap:8px}
+.sht{font-family:'Syne',sans-serif;font-size:13.5px;font-weight:700}
+
+/* FORECAST */
+.fi{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)}
+.fi:last-child{border-bottom:none}
+.fi-l{font-size:12.5px}
+.fi-v{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--acc)}
+
+/* AI INSIGHTS */
+.ai-insight{padding:10px 0;border-bottom:1px solid var(--border);font-size:12.5px;line-height:1.65}
+.ai-insight:last-child{border-bottom:none}
+
+/* CODE */
+.code-block{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:13px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ok);overflow-x:auto;white-space:pre;line-height:1.7;margin-bottom:12px}
+
+/* PROJECT STEPS */
+.proj-step{display:flex;align-items:center;gap:13px;padding:10px 0;border-bottom:1px solid var(--border)}
+.proj-step:last-child{border-bottom:none}
+.step-circle{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+
+/* OVERLAY */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99}
+.overlay.show{display:block}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* NOTIFICATION DOT */
+.notif-dot{position:absolute;top:8px;right:8px;width:7px;height:7px;background:var(--err);border-radius:50%;border:1.5px solid var(--surf)}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--card);border:1px solid var(--border2);border-radius:14px;padding:24px;max-width:480px;width:90%;max-height:80vh;overflow-y:auto}
+.modal-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:16px}
+.form-group{margin-bottom:13px}
+.form-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--dim);margin-bottom:5px;display:block}
+.form-input{width:100%;background:var(--surf);border:1px solid var(--border);border-radius:7px;padding:9px 12px;color:var(--txt);font-family:'DM Sans',sans-serif;font-size:13px;outline:none}
+.form-input:focus{border-color:var(--acc)}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  .side{transform:translateX(-100%)}
+  .side.open{transform:translateX(0)}
+  .main{margin-left:0}
+  .sgrid{grid-template-columns:1fr 1fr}
+  .g2{grid-template-columns:1fr}
+  .g3{grid-template-columns:1fr 1fr}
+  .cu-wrap{grid-template-columns:1fr;height:auto}
+  .topbar{padding:0 13px}
+  .content{padding:13px}
+  .mbtn{display:flex!important}
+  .ai-pill{display:none}
+  .kb-board{height:calc(100vh - 180px)}
+  .cal-grid .cal-d{min-height:56px}
+  .cc-meta{gap:10px}
+}
+@media(max-width:480px){
+  .sgrid{grid-template-columns:1fr}
+  .g3{grid-template-columns:1fr}
+  .sval{font-size:20px}
+}
+</style>
+</head>
+<body>
+
+<div id="overlay" class="overlay" onclick="closeSide()"></div>
+
+<!-- MODAL -->
+<div id="modal" class="modal-overlay">
+  <div class="modal" id="modal-body"></div>
+</div>
+
+<!-- SIDEBAR -->
+<aside class="side" id="side">
+  <div class="logo-area">
+    <div class="logo-name">SAMIFY</div>
+    <div class="logo-sub">CRM · ZicLun AB</div>
+  </div>
+  <div class="nav-wrap">
+    <div class="nav-sec">
+      <div class="nav-lbl">Översikt</div>
+      <div class="ni on" data-m="dash">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </div>
+    </div>
+    <div class="nav-sec">
+      <div class="nav-lbl">Ekonomi</div>
+      <div class="ni" data-m="fakt">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Fakturor <span class="nbadge" id="nb-fakt">3</span>
+      </div>
+      <div class="ni" data-m="avtal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Avtal
+      </div>
+    </div>
+    <div class="nav-sec">
+      <div class="nav-lbl">CRM</div>
+      <div class="ni" data-m="kund">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Kunder <span class="nbadge ok" id="nb-kund">8</span>
+      </div>
+      <div class="ni" data-m="pipe">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Pipeline
+      </div>
+    </div>
+    <div class="nav-sec">
+      <div class="nav-lbl">Planering</div>
+      <div class="ni" data-m="kal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Kalender
+      </div>
+    </div>
+  </div>
+  <div class="side-footer">
+    <div class="side-version">Samify CRM v1.0 · Supabase + Claude AI</div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <header class="topbar">
+    <button class="mbtn" onclick="toggleSide()">☰</button>
+    <span class="topbar-title" id="pt">Dashboard</span>
+    <div class="topbar-r">
+      <div class="ai-pill"><span class="ai-dot"></span>Samify AI aktiv</div>
+      <div class="ava" title="Adnan & Rasmus">SA</div>
+    </div>
+  </header>
+  <div class="content" id="ct"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  DATA
+// ═══════════════════════════════════════════════════════
+const clients = [
+  {n:'Nivell System AB', mrr:12499, ph:70, ct:'Gustaf', svc:'Nivell AI Desk + Integrationer', cs:'2025-01-15', cv:174986, desc:'AI-drivet offertsystem med CAD-analys via Claude Vision. Setup-avgift 24 995 kr, år-1 månadsavgift 12 499 kr. År 2+ höjs till 24 995 kr/mån.', owner:'Adnan'},
+  {n:'El-kretsen', mrr:3999, ph:100, ct:'Anna', svc:'Intranät + ELvis AI (FAQ-bot)', cs:'2024-11-01', cv:47988, desc:'Intranät deployat på Netlify med Claude-proxy. ELvis svarar på FAQ och loggar frågor i Supabase. Kretskampen quiz-app byggd separat.', owner:'Rasmus'},
+  {n:'Ecokraft', mrr:4999, ph:85, ct:'Marcus', svc:'Emaldo AI + Driving Dialer', cs:'2024-12-01', cv:59988, desc:'Emaldo AI hanterar kundförfrågningar om solpaneler, AC/DC-koppling, Grid Rewards. Driving Dialer-app integrerad med Asana för säljteamet.', owner:'Adnan'},
+  {n:'AWJ Elteknik AB', mrr:2499, ph:100, ct:'Anders', svc:'Intranät + Toolbox Widget', cs:'2025-02-01', cv:29988, desc:'Fullt intranät + JS popup-widget med 8 skärmar: ROT-kalkyl, checklistor, kontakter, statistik. Supabase-backend, postMessage-kommunikation.', owner:'Rasmus'},
+  {n:'Olsfors Elektriska', mrr:1499, ph:100, ct:'Per', svc:'Chatbot Widget (Wix)', cs:'2025-01-01', cv:17988, desc:'Samify-widget deployad via Netlify/GitHub som single script tag på Wix. Branded för Olsfors Elektriska.', owner:'Adnan'},
+  {n:'Emmaboda Energi', mrr:2999, ph:100, ct:'Lisa', svc:'Säljpresentation + Effektkollen', cs:'2024-10-01', cv:35988, desc:'9-slides HTML-säljpresentation med inbäddad effekttariff-kalkylator. GDPR-dokument (Datapolicy + DPA) framtagna.', owner:'Rasmus'},
+  {n:'TB-Group', mrr:1999, ph:75, ct:'Thomas', svc:'Headhunting Kit + TB-Bot v1.3', cs:'2025-03-01', cv:23988, desc:'React-baserad Headhunting Kit-generator. TB-Bot v1.3 med GDPR-consent-flöde för lead-capture via Zapier.', owner:'Adnan'},
+  {n:'Hönshyltegård', mrr:999, ph:90, ct:'Sara', svc:'Bokningssystem (SimplyBook)', cs:'2025-02-15', cv:11988, desc:'Publik bokningswidget + PIN-skyddad admin-dashboard för alpakafarm. SimplyBook API via Netlify Function, Open-Meteo väderintegration.', owner:'Rasmus'},
+];
+
+let invoices = [
+  {id:1, cl:'Nivell System AB', am:12499, due:'2026-04-01', st:'pending', cat:'Månadsavgift April'},
+  {id:2, cl:'El-kretsen', am:3999, due:'2026-04-05', st:'pending', cat:'Månadsavgift April'},
+  {id:3, cl:'Ecokraft', am:4999, due:'2026-04-01', st:'paid', cat:'Månadsavgift April'},
+  {id:4, cl:'AWJ Elteknik AB', am:2499, due:'2026-03-28', st:'paid', cat:'Månadsavgift Mars'},
+  {id:5, cl:'Olsfors Elektriska', am:1499, due:'2026-03-20', st:'overdue', cat:'Månadsavgift Mars'},
+  {id:6, cl:'Emmaboda Energi', am:2999, due:'2026-04-03', st:'pending', cat:'Månadsavgift April'},
+  {id:7, cl:'TB-Group', am:1999, due:'2026-04-01', st:'pending', cat:'Månadsavgift April'},
+  {id:8, cl:'Hönshyltegård', am:999, due:'2026-04-15', st:'pending', cat:'Månadsavgift April'},
+];
+
+let contracts = [
+  {cl:'Nivell System AB', sv:12499, st:'2025-01-15', en:'2026-01-14', bind:12, notice:3, tot:174986, note:'År 2+: 24 995 kr/mån'},
+  {cl:'El-kretsen', sv:3999, st:'2024-11-01', en:'2025-10-31', bind:12, notice:3, tot:47988, note:'Löpande efter bindningstid'},
+  {cl:'Ecokraft', sv:4999, st:'2024-12-01', en:'2025-11-30', bind:12, notice:2, tot:59988, note:'Inkl. Driving Dialer-licens'},
+  {cl:'AWJ Elteknik AB', sv:2499, st:'2025-02-01', en:'2026-01-31', bind:12, notice:3, tot:29988, note:'Löpande support inkluderat'},
+  {cl:'Olsfors Elektriska', sv:1499, st:'2025-01-01', en:'2025-12-31', bind:12, notice:1, tot:17988, note:''},
+  {cl:'Emmaboda Energi', sv:2999, st:'2024-10-01', en:'2025-09-30', bind:12, notice:3, tot:35988, note:''},
+  {cl:'TB-Group', sv:1999, st:'2025-03-01', en:'2026-02-28', bind:12, notice:2, tot:23988, note:''},
+  {cl:'Hönshyltegård', sv:999, st:'2025-02-15', en:'2026-02-14', bind:12, notice:1, tot:11988, note:''},
+];
+
+let pipeline = [
+  {co:'Bergström & Partners', ct:'Erik Bergström', val:84000, ph:'prospekt', dt:'2026-03-20', note:'Advokatbyrå — dokumentautomation'},
+  {co:'Kalmar Teknik AB', ct:'Johanna Nilsson', val:36000, ph:'kontaktad', dt:'2026-03-22', note:'Möte bokat 5 april'},
+  {co:'Sydkust Bygg', ct:'Mats Lundgren', val:48000, ph:'demo', dt:'2026-03-18', note:'Demo chatbot + integration gick bra'},
+  {co:'Öland Fastigheter', ct:'Anna Pettersson', val:120000, ph:'offert', dt:'2026-03-15', note:'Offert skickad — väntar på svar'},
+  {co:'Glastech Syd', ct:'Marie Holm', val:60000, ph:'prospekt', dt:'2026-03-28', note:'LinkedIn-kontakt, intresserad av AI-agent'},
+  {co:'Sjölins Elektriska', ct:'Klas Sjölin', val:24000, ph:'uppföljning', dt:'2026-03-25', note:'Följ upp efter påsk'},
+  {co:'Linnéuniversitetet', ct:'Henrik Svensson', val:96000, ph:'förlorad', dt:'2026-02-28', note:'Valde Microsoft Copilot'},
+];
+
+const kbCols = [
+  {id:'prospekt', label:'Prospekt', color:'var(--dim)'},
+  {id:'kontaktad', label:'Kontaktad', color:'var(--pur)'},
+  {id:'demo', label:'Demo bokat', color:'var(--warn)'},
+  {id:'offert', label:'Offert skickad', color:'var(--acc)'},
+  {id:'uppföljning', label:'Uppföljning', color:'var(--ok)'},
+  {id:'förlorad', label:'Förlorad', color:'var(--err)'},
+];
+
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+const S = {
+  mod: 'dash',
+  cu: 0,
+  kTab: 'Översikt',
+  fTab: 'lista',
+  chat: [],
+  calMon: 3, calYear: 2026,
+};
+
+const titles = {dash:'Dashboard',fakt:'Fakturor',avtal:'Avtal & Kontrakt',kund:'Kunder',pipe:'Pipeline',kal:'Kalender'};
+
+// ═══════════════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════════════
+const fmtSEK = n => new Intl.NumberFormat('sv-SE').format(Math.round(n));
+const fmt = n => fmtSEK(n) + ' kr';
+const totalMRR = () => clients.reduce((a,c) => a+c.mrr, 0);
+const pending = () => invoices.filter(i=>i.st==='pending').reduce((a,i)=>a+i.am,0);
+const overdue = () => invoices.filter(i=>i.st==='overdue').reduce((a,i)=>a+i.am,0);
+const pipeActive = () => pipeline.filter(p=>p.ph!=='förlorad').reduce((a,p)=>a+p.val,0);
+
+function statusBdg(st) {
+  if (st==='paid') return '<span class="bdg bdg-ok">Betald</span>';
+  if (st==='pending') return '<span class="bdg bdg-warn">Väntande</span>';
+  if (st==='overdue') return '<span class="bdg bdg-err">Förfallen</span>';
+  return '<span class="bdg bdg-neu">'+st+'</span>';
+}
+
+// ═══════════════════════════════════════════════════════
+//  NAV
+// ═══════════════════════════════════════════════════════
+function go(m) {
+  S.mod = m;
+  document.querySelectorAll('.ni').forEach(el => el.classList.toggle('on', el.dataset.m === m));
+  document.getElementById('pt').textContent = titles[m];
+  closeSide();
+  render();
+}
+function toggleSide() {
+  document.getElementById('side').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('show');
+}
+function closeSide() {
+  document.getElementById('side').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER ROUTER
+// ═══════════════════════════════════════════════════════
+function render() {
+  const ct = document.getElementById('ct');
+  const m = S.mod;
+  if (m==='dash') ct.innerHTML = renderDash();
+  else if (m==='fakt') ct.innerHTML = renderFakt();
+  else if (m==='avtal') ct.innerHTML = renderAvtal();
+  else if (m==='kund') ct.innerHTML = renderKund();
+  else if (m==='pipe') ct.innerHTML = renderPipe();
+  else if (m==='kal') ct.innerHTML = renderKal();
+  afterRender(m);
+  updateBadges();
+}
+
+function afterRender(m) {
+  if (m==='kund' && S.kTab==='AI-assistent') {
+    scrollAi();
+    const inp = document.getElementById('ai-in');
+    if (inp) inp.focus();
+  }
+}
+
+function updateBadges() {
+  const nb = document.getElementById('nb-fakt');
+  if (nb) nb.textContent = invoices.filter(i=>i.st!=='paid').length;
+}
+
+// ═══════════════════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════════════════
+function renderDash() {
+  const mrr = totalMRR();
+  const arr = mrr * 12;
+  const mths = ['Okt','Nov','Dec','Jan','Feb','Mar'];
+  const mVals = [21500, 24200, 28800, 31200, 33500, mrr];
+  const maxV = Math.max(...mVals);
+  const bars = mVals.map((v,i) => `<div class="bar-w"><div class="bar" style="height:${Math.max(4,Math.round(v/maxV*88))}%"></div><div class="bar-l">${mths[i]}</div></div>`).join('');
+
+  const upcoming = [...invoices].filter(i=>i.st!=='paid').sort((a,b)=>new Date(a.due)-new Date(b.due)).slice(0,5);
+  const tl = upcoming.map(i => {
+    const d = new Date(i.due);
+    return `<div class="tl-item">
+      <div class="tl-date"><div class="tl-day">${d.getDate()}</div><div class="tl-mon">${d.toLocaleDateString('sv-SE',{month:'short'})}</div></div>
+      <div class="tl-info"><div class="tl-cl">${i.cl}</div><div class="tl-ds">${i.cat}</div></div>
+      <div style="text-align:right"><div class="tl-am">${fmt(i.am)}</div><div style="margin-top:4px">${statusBdg(i.st)}</div></div>
+    </div>`;
+  }).join('');
+
+  const insights = [
+    `📈 MRR <b>${fmt(mrr)}/mån</b> — ökat <b>+56%</b> på 6 månader. Stark tillväxt!`,
+    `⚠️ <b>${invoices.filter(i=>i.st==='overdue').length} förfallen faktura</b> (${fmt(overdue())}) — skicka påminnelse till Olsfors.`,
+    `🔔 <b>3 avtal</b> löper ut inom 4 månader — initiera förnyelsediskussion nu.`,
+    `🎯 <b>${fmt(pipeActive())}</b> i aktivt pipeline — ${pipeline.filter(p=>p.ph==='offert').length} offert/ar ute för svar.`,
+  ];
+
+  return `
+    <div class="sgrid">
+      <div class="scard c-acc"><div class="slabel">MRR · Månadsintäkt</div><div class="sval">${fmtSEK(mrr)}</div><div class="sdelta up">↑ +8% vs förra månaden</div></div>
+      <div class="scard c-pur"><div class="slabel">ARR · Årsintäkt</div><div class="sval">${fmtSEK(arr)}</div><div class="sdelta">${clients.length} aktiva kunder</div></div>
+      <div class="scard c-warn"><div class="slabel">Väntande fakturor</div><div class="sval">${fmtSEK(pending())}</div><div class="sdelta">${invoices.filter(i=>i.st==='pending').length} ute</div></div>
+      <div class="scard c-ok"><div class="slabel">Pipeline-värde</div><div class="sval">${fmtSEK(pipeActive())}</div><div class="sdelta">${pipeline.filter(p=>p.ph!=='förlorad').length} aktiva deals</div></div>
+    </div>
+    <div class="g2" style="margin-bottom:14px">
+      <div class="card">
+        <div class="card-hd"><span class="card-ht">MRR-tillväxt (6 mån)</span><span class="bdg bdg-ok">Live</span></div>
+        <div class="card-body">
+          <div style="font-size:10px;color:var(--dim);margin-bottom:6px">SEK / månad</div>
+          <div class="bars">${bars}</div>
+          <div style="text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--acc);margin-top:4px">+${fmtSEK(mrr-21500)} kr sedan okt</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><span class="card-ht">AI Intäktsprognos</span><span class="ai-pill"><span class="ai-dot"></span>Claude AI</span></div>
+        <div class="card-body">
+          <div class="fi"><span class="fi-l">Prognos April 2026</span><span class="fi-v">${fmt(Math.round(mrr*1.06))}/mån</span></div>
+          <div class="fi"><span class="fi-l">Prognos Q2 2026 (tot)</span><span class="fi-v">${fmt(Math.round(mrr*3.2))}</span></div>
+          <div class="fi"><span class="fi-l">ARR-prognos helår 2026</span><span class="fi-v">${fmt(Math.round(arr*1.22))}</span></div>
+          <div class="fi"><span class="fi-l">Konverterad pipeline (est.)</span><span class="fi-v">+${fmt(Math.round(pipeline.filter(p=>['offert','demo'].includes(p.ph)).reduce((a,p)=>a+p.val,0)/12))}/mån</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-hd"><span class="card-ht">Kommande betalningar</span><button class="btn btn-g btn-sm" onclick="go('fakt')">Visa alla</button></div>
+        <div class="card-body" style="padding:12px"><div class="tl">${tl}</div></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><span class="card-ht">AI-analys</span><span class="ai-pill"><span class="ai-dot"></span>Samify AI</span></div>
+        <div class="card-body">${insights.map(s=>`<div class="ai-insight">${s}</div>`).join('')}</div>
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  FAKTUROR
+// ═══════════════════════════════════════════════════════
+function renderFakt() {
+  const sorted = [...invoices].sort((a,b) => new Date(a.due)-new Date(b.due));
+  const rows = sorted.map(i => `<tr>
+    <td><b>${i.cl}</b></td>
+    <td style="font-family:'JetBrains Mono',monospace">${fmt(i.am)}</td>
+    <td style="font-family:'JetBrains Mono',monospace;color:${i.st==='overdue'?'var(--err)':'inherit'}">${i.due}</td>
+    <td style="color:var(--dim);font-size:12px">${i.cat}</td>
+    <td>${statusBdg(i.st)}</td>
+    <td style="display:flex;gap:5px">
+      ${i.st!=='paid'?`<button class="btn btn-g btn-sm" onclick="markPaid(${i.id})">✓ Betald</button>`:''}
+      <button class="btn btn-pur btn-sm" onclick="sendReminder('${i.cl}')">📧</button>
+    </td>
+  </tr>`).join('');
+
+  return `
+    <div class="dz" id="dz" onclick="triggerFileInput()">
+      <input type="file" id="fi" accept=".pdf,.png,.jpg,.jpeg" style="display:none" onchange="handleFile(event)">
+      <div class="dz-ico">📄</div>
+      <div class="dz-t"><b>Dra & släpp faktura</b> här, eller klicka för att välja fil<br><small style="color:var(--faint);font-size:11px">AI extraherar kund, belopp, förfallodatum och kategoriserar automatiskt</small></div>
+    </div>
+    <div id="ai-fakt-result"></div>
+    <div class="card">
+      <div class="card-hd">
+        <span class="card-ht">Alla fakturor (${invoices.length})</span>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <span class="bdg bdg-ok">Betalt: ${fmt(invoices.filter(i=>i.st==='paid').reduce((a,i)=>a+i.am,0))}</span>
+          <span class="bdg bdg-warn">Väntande: ${fmt(pending())}</span>
+          ${overdue()>0?`<span class="bdg bdg-err">Förfallet: ${fmt(overdue())}</span>`:''}
+          <button class="btn btn-p btn-sm" onclick="showNewInvoiceModal()">+ Ny faktura</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead><tr><th>Kund</th><th>Belopp</th><th>Förfallodatum</th><th>Kategori</th><th>Status</th><th>Åtgärd</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function triggerFileInput() {
+  document.getElementById('fi').click();
+}
+
+function handleFile(e) {
+  if (e.target.files && e.target.files.length > 0) {
+    simulateFaktAI(e.target.files[0].name);
+  }
+}
+
+function simulateFaktAI(fname) {
+  const r = document.getElementById('ai-fakt-result');
+  if (!r) return;
+  r.innerHTML = `<div class="card" style="margin-bottom:14px;border-color:var(--pur)">
+    <div class="card-hd"><span class="card-ht" style="color:var(--pur)">🤖 AI analyserar ${fname||'fakturan'}...</span><span class="ai-pill"><span class="ai-dot"></span>Claude Vision</span></div>
+    <div class="card-body" style="color:var(--dim);font-size:13px">Extraherar kundnamn, belopp, förfallodatum och kategoriserar...</div>
+  </div>`;
+  const demos = [
+    {cl:'Ecokraft AB', am:4999, due:'2026-04-30', cat:'Månadsavgift — Emaldo AI + Driving Dialer'},
+    {cl:'Bergström & Partners', am:12000, due:'2026-04-15', cat:'Projektfaktura — Dokumentautomation'},
+    {cl:'Kalmar Teknik AB', am:2499, due:'2026-04-20', cat:'Månadsavgift — Chatbot Widget'},
+  ];
+  const ex = demos[Math.floor(Math.random()*demos.length)];
+  setTimeout(() => {
+    r.innerHTML = `<div class="card" style="margin-bottom:14px;border-color:var(--ok)">
+      <div class="card-hd"><span class="card-ht" style="color:var(--ok)">✓ AI extraherade fakturadata</span><button class="btn btn-p btn-sm" onclick="addExtractedInvoice(${JSON.stringify(ex).replace(/"/g,"'")})">+ Lägg till i listan</button></div>
+      <div class="card-body">
+        <div class="cc-meta">
+          <div class="cc-mk"><div class="cc-ml">Kund (AI)</div><div class="cc-mv">${ex.cl}</div></div>
+          <div class="cc-mk"><div class="cc-ml">Belopp</div><div class="cc-mv">${fmtSEK(ex.am)} kr</div></div>
+          <div class="cc-mk"><div class="cc-ml">Förfallodatum</div><div class="cc-mv">${ex.due}</div></div>
+          <div class="cc-mk"><div class="cc-ml">Kategori (AI)</div><div class="cc-mv">${ex.cat}</div></div>
+        </div>
+      </div>
+    </div>`;
+  }, 2000);
+}
+
+function addExtractedInvoice(ex) {
+  invoices.push({id:Date.now(), cl:ex.cl||ex.replace(/'/g,'"').cl, am:ex.am, due:ex.due, st:'pending', cat:ex.cat});
+  document.getElementById('ai-fakt-result').innerHTML = '';
+  render();
+}
+
+function markPaid(id) {
+  const inv = invoices.find(i=>i.id===id);
+  if (inv) { inv.st='paid'; render(); }
+}
+
+function sendReminder(cl) {
+  showToast(`📧 Påminnelse skickad till ${cl}`);
+}
+
+function showNewInvoiceModal() {
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-title">Ny faktura</div>
+    <div class="form-group"><label class="form-label">Kund</label>
+      <select class="form-input" id="m-cl">${clients.map(c=>`<option>${c.n}</option>`).join('')}</select></div>
+    <div class="form-group"><label class="form-label">Belopp (SEK)</label><input class="form-input" id="m-am" type="number" placeholder="3999"></div>
+    <div class="form-group"><label class="form-label">Förfallodatum</label><input class="form-input" id="m-due" type="date" value="2026-04-30"></div>
+    <div class="form-group"><label class="form-label">Kategori</label><input class="form-input" id="m-cat" placeholder="Månadsavgift April"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-p" onclick="saveNewInvoice()">Spara faktura</button>
+      <button class="btn btn-g" onclick="closeModal()">Avbryt</button>
+    </div>`;
+  document.getElementById('modal').classList.add('show');
+}
+
+function saveNewInvoice() {
+  const cl = document.getElementById('m-cl').value;
+  const am = parseFloat(document.getElementById('m-am').value)||0;
+  const due = document.getElementById('m-due').value;
+  const cat = document.getElementById('m-cat').value;
+  if (!cl||!am||!due) return;
+  invoices.push({id:Date.now(), cl, am, due, st:'pending', cat});
+  closeModal(); render();
+}
+
+// ═══════════════════════════════════════════════════════
+//  AVTAL
+// ═══════════════════════════════════════════════════════
+function renderAvtal() {
+  const today = new Date();
+  const cards = contracts.map((c,i) => {
+    const st = new Date(c.st), en = new Date(c.en);
+    const daysLeft = Math.max(0, Math.round((en-today)/(1000*60*60*24)));
+    const pct = Math.max(0, Math.min(100, Math.round(((today-st)/(en-st))*100)));
+    const expiring = daysLeft < 90;
+    return `<div class="cc">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px">
+        <div><div class="cc-name">${c.cl}</div>${c.note?`<div style="font-size:11px;color:var(--dim);margin-top:1px">${c.note}</div>`:''}</div>
+        ${expiring?'<span class="bdg bdg-err">⚠️ Löper ut snart</span>':'<span class="bdg bdg-ok">Aktivt</span>'}
+      </div>
+      <div class="cc-meta">
+        <div class="cc-mk"><div class="cc-ml">Månadsavgift</div><div class="cc-mv">${fmtSEK(c.sv)} kr</div></div>
+        <div class="cc-mk"><div class="cc-ml">Avtalsvärde</div><div class="cc-mv">${fmtSEK(c.tot)} kr</div></div>
+        <div class="cc-mk"><div class="cc-ml">Bindningstid</div><div class="cc-mv">${c.bind} mån</div></div>
+        <div class="cc-mk"><div class="cc-ml">Uppsägning</div><div class="cc-mv">${c.notice} mån</div></div>
+        <div class="cc-mk"><div class="cc-ml">Start</div><div class="cc-mv">${c.st}</div></div>
+        <div class="cc-mk"><div class="cc-ml">Slut</div><div class="cc-mv">${c.en}</div></div>
+      </div>
+      <div style="font-size:10.5px;color:var(--dim);margin-bottom:4px">${pct}% av avtalsperioden genomförd — <b style="color:${expiring?'var(--err)':'var(--txt)'}">${daysLeft} dagar kvar</b></div>
+      <div class="prog"><div class="prog-f" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+
+  const totalArr = contracts.reduce((a,c)=>a+c.tot,0);
+  return `
+    <div class="dz" id="cdz" onclick="simulateContractAI()">
+      <div class="dz-ico">📋</div>
+      <div class="dz-t"><b>Ladda upp signerat avtal</b> — AI extraherar all nyckeldata<br>
+        <small style="color:var(--faint);font-size:11px">Kund, månadsavgift, bindningstid, uppsägningstid, startdatum</small></div>
+    </div>
+    <div id="ai-contract-result"></div>
+    <div class="shd">
+      <span class="sht">Aktiva avtal (${contracts.length})</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--acc)">Total ARR: ${fmt(totalArr)}</span>
+    </div>
+    ${cards}`;
+}
+
+function simulateContractAI() {
+  const r = document.getElementById('ai-contract-result');
+  if (!r) return;
+  r.innerHTML = `<div class="cc" style="border-color:var(--pur);margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span class="card-ht">AI läser avtal...</span>
+      <span class="ai-pill"><span class="ai-dot"></span>Claude Vision</span>
+    </div>
+    <div style="color:var(--dim);font-size:13px;margin-top:8px">Extraherar kundinfo, belopp, villkor, bindningstid...</div>
+  </div>`;
+  setTimeout(() => {
+    const ex = {cl:'Ny Kund AB', sv:4500, st:'2026-04-01', en:'2027-03-31', bind:12, notice:3, tot:54000, note:'AI-extraktion'};
+    r.innerHTML = `<div class="cc" style="border-color:var(--ok);margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <span class="card-ht" style="color:var(--ok)">✓ Avtal analyserat av AI</span>
+        <button class="btn btn-p btn-sm" onclick="addContract()">+ Lägg till</button>
+      </div>
+      <div class="cc-meta">
+        <div class="cc-mk"><div class="cc-ml">Kund</div><div class="cc-mv">${ex.cl}</div></div>
+        <div class="cc-mk"><div class="cc-ml">Månadsavgift</div><div class="cc-mv">${fmtSEK(ex.sv)} kr</div></div>
+        <div class="cc-mk"><div class="cc-ml">Avtalstart</div><div class="cc-mv">${ex.st}</div></div>
+        <div class="cc-mk"><div class="cc-ml">Bindningstid</div><div class="cc-mv">${ex.bind} mån</div></div>
+        <div class="cc-mk"><div class="cc-ml">Uppsägning</div><div class="cc-mv">${ex.notice} mån</div></div>
+        <div class="cc-mk"><div class="cc-ml">Totalt värde</div><div class="cc-mv">${fmtSEK(ex.tot)} kr</div></div>
+      </div>
+    </div>`;
+  }, 2500);
+}
+
+function addContract() {
+  contracts.push({cl:'Ny Kund AB', sv:4500, st:'2026-04-01', en:'2027-03-31', bind:12, notice:3, tot:54000, note:'AI-extraktion'});
+  document.getElementById('ai-contract-result').innerHTML = '';
+  render();
+}
+
+// ═══════════════════════════════════════════════════════
+//  KUNDER
+// ═══════════════════════════════════════════════════════
+function renderKund() {
+  const c = clients[S.cu];
+  const cuList = clients.map((cl,i) => `
+    <div class="cu-item${i===S.cu?' on':''}" onclick="selCu(${i})">
+      <div class="cu-name">${cl.n}</div>
+      <div class="cu-mrr">${fmtSEK(cl.mrr)} kr/mån</div>
+    </div>`).join('');
+
+  const tabs = ['Översikt','Projekt','Dokument','Kod','AI-assistent'];
+  const tabsHTML = tabs.map(t=>`<div class="tab${S.kTab===t?' on':''}" onclick="setKTab('${t}')">${t}</div>`).join('');
+
+  let content = '';
+  const t = S.kTab;
+
+  if (t==='Översikt') {
+    content = `
+      <div class="g3" style="margin-bottom:14px">
+        <div class="scard c-acc"><div class="slabel">MRR</div><div class="sval" style="font-size:20px">${fmtSEK(c.mrr)}</div><div class="sdelta">kr / månad</div></div>
+        <div class="scard c-pur"><div class="slabel">Avtalsvärde</div><div class="sval" style="font-size:20px">${fmtSEK(c.cv)}</div><div class="sdelta">totalt</div></div>
+        <div class="scard c-ok"><div class="slabel">Projektstatus</div><div class="sval" style="font-size:20px">${c.ph}%</div><div class="prog" style="margin-top:7px"><div class="prog-f" style="width:${c.ph}%"></div></div></div>
+      </div>
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-hd"><span class="card-ht">Kundinfo</span><span class="bdg bdg-neu">${c.owner}</span></div>
+        <div class="card-body">
+          <div class="fi"><span class="fi-l">Kontaktperson</span><span style="color:var(--txt)">${c.ct}</span></div>
+          <div class="fi"><span class="fi-l">Tjänst</span><span style="color:var(--txt);text-align:right;max-width:55%">${c.svc}</span></div>
+          <div class="fi"><span class="fi-l">Avtalsstart</span><span style="font-family:'JetBrains Mono',monospace">${c.cs}</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><span class="card-ht">Beskrivning</span></div>
+        <div class="card-body"><div style="font-size:13px;line-height:1.75;color:var(--dim)">${c.desc}</div></div>
+      </div>`;
+  } else if (t==='Projekt') {
+    const stages = ['Kartläggning','Prototyp','Driftsättning','Löpande support'];
+    const pcts = [25,50,75,100];
+    content = `
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-hd"><span class="card-ht">Samify-metoden — Projektstatus</span><span class="bdg bdg-acc">${c.ph}% klart</span></div>
+        <div class="card-body" style="padding:12px 17px">
+          ${stages.map((s,i) => {
+            const done = c.ph >= pcts[i];
+            const cur = c.ph >= (pcts[i-1]||0) && c.ph < pcts[i];
+            const bg = done?'var(--ok)':cur?'var(--acc)':'var(--border2)';
+            const col = done||cur?'#000':'var(--dim)';
+            return `<div class="proj-step">
+              <div class="step-circle" style="background:${bg};color:${col}">${done?'✓':i+1}</div>
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:600;color:${done?'var(--ok)':cur?'var(--acc)':'var(--dim)'}">${s}</div>
+                <div style="font-size:11px;color:var(--faint)">${done?'Slutförd':cur?'Pågående':'Ej påbörjad'}</div>
+              </div>
+              ${cur?'<span class="bdg bdg-warn">Aktiv</span>':done?'<span class="bdg bdg-ok">✓</span>':''}
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><span class="card-ht">Anteckningar & milstolpar</span><button class="btn btn-g btn-sm">+ Lägg till</button></div>
+        <div class="card-body" style="color:var(--dim);font-size:13px;text-align:center;padding:24px 0">Inga anteckningar. Lägg till möten, beslut och milstolpar.</div>
+      </div>`;
+  } else if (t==='Dokument') {
+    const docs = [{n:'Signerat avtal',ty:'PDF',dt:'2025-01-15',sz:'245 KB'},{n:'GDPR-DPA',ty:'PDF',dt:'2025-01-15',sz:'180 KB'},{n:'Teknisk specifikation',ty:'HTML',dt:'2025-01-20',sz:'42 KB'},{n:'Projektoffert',ty:'PDF',dt:'2025-01-10',sz:'320 KB'}];
+    content = `<div class="card">
+      <div class="card-hd"><span class="card-ht">Dokument — ${c.n}</span><button class="btn btn-p btn-sm">+ Ladda upp</button></div>
+      <div style="overflow-x:auto"><table class="tbl">
+        <thead><tr><th>Dokument</th><th>Typ</th><th>Datum</th><th>Storlek</th><th></th></tr></thead>
+        <tbody>${docs.map(d=>`<tr>
+          <td><span style="margin-right:7px">${d.ty==='PDF'?'📄':'📝'}</span><b>${d.n}</b></td>
+          <td><span class="bdg bdg-neu">${d.ty}</span></td>
+          <td style="font-family:'JetBrains Mono',monospace;font-size:11.5px">${d.dt}</td>
+          <td style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--dim)">${d.sz}</td>
+          <td><button class="btn btn-g btn-sm">Visa</button></td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+  } else if (t==='Kod') {
+    const slug = c.n.toLowerCase().replace(/\s+/g,'-').replace(/[åä]/g,'a').replace(/ö/g,'o');
+    content = `<div class="card">
+      <div class="card-hd"><span class="card-ht">Kodlager — ${c.n}</span><button class="btn btn-p btn-sm">+ Lägg till snippet</button></div>
+      <div class="card-body">
+        <div style="font-size:11px;color:var(--dim);margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Deploy-script</div>
+        <div class="code-block">&lt;!-- Samify Widget för ${c.n} --&gt;
+&lt;script
+  src="https://samify-widget.netlify.app/widget.js"
+  data-client="${slug}"
+  data-theme="#f0a020"&gt;
+&lt;/script&gt;</div>
+        <div style="font-size:11px;color:var(--dim);margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Netlify Function (Claude Proxy)</div>
+        <div class="code-block">// netlify/functions/claude-proxy.js
+const resp = await fetch(
+  'https://api.anthropic.com/v1/messages',
+  {
+    headers: {
+      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify(req.body)
+  }
+)</div>
+      </div>
+    </div>`;
+  } else if (t==='AI-assistent') {
+    const msgs = S.chat.length===0
+      ? `<div class="ai-m bot">Hej! Jag är din AI-assistent för <b>${c.n}</b>.<br>Jag känner till kundens avtal, tjänster och projektstatus. Fråga mig om nästa steg, merförsäljning eller idéer! 💡</div>`
+      : S.chat.map(m=>`<div class="ai-m ${m.role==='user'?'usr':'bot'}">${m.content}</div>`).join('');
+    content = `<div class="card">
+      <div class="card-hd"><span class="card-ht">AI-assistent — ${c.n}</span><span class="ai-pill"><span class="ai-dot"></span>Claude AI</span></div>
+      <div class="ai-chat-box">
+        <div class="ai-msgs" id="ai-msgs">${msgs}</div>
+        <div class="ai-inp-row">
+          <input class="ai-inp" id="ai-in" placeholder="Fråga om ${c.n}..." onkeydown="if(event.key==='Enter')aiSend()">
+          <button class="btn btn-p" onclick="aiSend()">Skicka</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  return `<div class="cu-wrap">
+    <div class="cu-list">${cuList}</div>
+    <div style="display:flex;flex-direction:column;min-height:0">
+      <div style="margin-bottom:14px">
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin-bottom:5px">${c.n}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <span class="bdg bdg-ok">Aktiv kund</span>
+          <span class="bdg bdg-info">${c.svc}</span>
+        </div>
+      </div>
+      <div class="tabs" style="margin-bottom:14px">${tabsHTML}</div>
+      <div style="overflow-y:auto;flex:1">${content}</div>
+    </div>
+  </div>`;
+}
+
+function selCu(i) { S.cu=i; S.chat=[]; S.kTab='Översikt'; render(); }
+function setKTab(t) { S.kTab=t; if(t!=='AI-assistent') S.chat=[]; render(); }
+
+// ═══════════════════════════════════════════════════════
+//  PIPELINE
+// ═══════════════════════════════════════════════════════
+function renderPipe() {
+  const cols = kbCols.map(col => {
+    const cards = pipeline.filter(p=>p.ph===col.id);
+    const colTotal = cards.reduce((a,p)=>a+p.val,0);
+    const cardHTML = cards.map(p=>`<div class="kb-card" onclick="showDealDetail('${p.co}')">
+      <div class="kb-co">${p.co}</div>
+      <div class="kb-ct">${p.ct}</div>
+      <div class="kb-note">${p.note}</div>
+      <div class="kb-val">${fmt(p.val)}</div>
+      <div class="kb-dt">${p.dt}</div>
+    </div>`).join('');
+    return `<div class="kb-col">
+      <div class="kb-hd">
+        <span class="kb-ht" style="color:${col.color}">${col.label}</span>
+        <span class="kb-cnt">${cards.length}</span>
+      </div>
+      <div class="kb-cards">${cardHTML||'<div style="padding:16px;text-align:center;font-size:11px;color:var(--faint)">Tom</div>'}</div>
+      ${colTotal>0?`<div class="kb-footer" style="font-family:\'JetBrains Mono\',monospace;font-size:10.5px;color:var(--acc);text-align:center">${fmt(colTotal)}</div>`:''}
+    </div>`;
+  }).join('');
+
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        <span class="bdg bdg-acc">Pipeline: ${fmt(pipeActive())}</span>
+        <span class="bdg bdg-ok">${pipeline.filter(p=>p.ph!=='förlorad').length} aktiva deals</span>
+        <span class="bdg bdg-warn">${pipeline.filter(p=>p.ph==='offert').length} offert/ar ute</span>
+      </div>
+      <button class="btn btn-p btn-sm" onclick="showNewDealModal()">+ Ny deal</button>
+    </div>
+    <div class="kb-board">${cols}</div>`;
+}
+
+function showNewDealModal() {
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-title">Ny deal i pipeline</div>
+    <div class="form-group"><label class="form-label">Företag</label><input class="form-input" id="m-co" placeholder="Företagsnamn AB"></div>
+    <div class="form-group"><label class="form-label">Kontaktperson</label><input class="form-input" id="m-ct" placeholder="Förnamn Efternamn"></div>
+    <div class="form-group"><label class="form-label">Värde (SEK/år)</label><input class="form-input" id="m-val" type="number" placeholder="36000"></div>
+    <div class="form-group"><label class="form-label">Fas</label>
+      <select class="form-input" id="m-ph">${kbCols.map(c=>`<option value="${c.id}">${c.label}</option>`).join('')}</select></div>
+    <div class="form-group"><label class="form-label">Anteckning</label><input class="form-input" id="m-note" placeholder="Kort beskrivning..."></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-p" onclick="saveNewDeal()">Spara deal</button>
+      <button class="btn btn-g" onclick="closeModal()">Avbryt</button>
+    </div>`;
+  document.getElementById('modal').classList.add('show');
+}
+
+function saveNewDeal() {
+  const co=document.getElementById('m-co').value;
+  const ct=document.getElementById('m-ct').value;
+  const val=parseFloat(document.getElementById('m-val').value)||0;
+  const ph=document.getElementById('m-ph').value;
+  const note=document.getElementById('m-note').value;
+  if(!co||!val) return;
+  const today = new Date().toISOString().split('T')[0];
+  pipeline.push({co,ct,val,ph,dt:today,note});
+  closeModal(); render();
+}
+
+function showDealDetail(co) {
+  const deal = pipeline.find(p=>p.co===co);
+  if (!deal) return;
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-title">${deal.co}</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="fi"><span class="fi-l">Kontakt</span><span>${deal.ct}</span></div>
+      <div class="fi"><span class="fi-l">Värde</span><span style="font-family:'JetBrains Mono',monospace;color:var(--acc)">${fmt(deal.val)}</span></div>
+      <div class="fi"><span class="fi-l">Fas</span><span class="bdg bdg-info">${deal.ph}</span></div>
+      <div class="fi"><span class="fi-l">Datum</span><span style="font-family:'JetBrains Mono',monospace">${deal.dt}</span></div>
+      <div style="padding:10px 0;border-top:1px solid var(--border)"><div style="font-size:11px;color:var(--dim);margin-bottom:5px">Anteckning</div><div style="font-size:13px">${deal.note||'—'}</div></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+      <select class="form-input" id="mv-ph" style="flex:1">${kbCols.map(c=>`<option value="${c.id}"${c.id===deal.ph?' selected':''}>${c.label}</option>`).join('')}</select>
+      <button class="btn btn-p" onclick="moveDeal('${deal.co}')">Flytta fas</button>
+      <button class="btn btn-g" onclick="closeModal()">Stäng</button>
+    </div>`;
+  document.getElementById('modal').classList.add('show');
+}
+
+function moveDeal(co) {
+  const deal = pipeline.find(p=>p.co===co);
+  const newPh = document.getElementById('mv-ph').value;
+  if (deal) deal.ph = newPh;
+  closeModal(); render();
+}
+
+// ═══════════════════════════════════════════════════════
+//  KALENDER
+// ═══════════════════════════════════════════════════════
+function renderKal() {
+  const months = ['Januari','Februari','Mars','April','Maj','Juni','Juli','Augusti','September','Oktober','November','December'];
+  const days = ['Mån','Tis','Ons','Tor','Fre','Lör','Sön'];
+  const y=S.calYear, m=S.calMon;
+  const first = new Date(y,m-1,1);
+  const last = new Date(y,m,0);
+  let dow = first.getDay(); dow = dow===0?6:dow-1;
+
+  // April 2026 events
+  const eventsMap = {
+    1:['pay:Faktura Nivell','pay:Faktura TB-Group'],
+    3:['meet:Möte El-kretsen'],
+    5:['pay:Faktura El-kretsen','pay:Faktura Ecokraft'],
+    8:['meet:Demo Kalmar Teknik'],
+    10:['pay:Faktura Olsfors'],
+    15:['pay:Faktura Hönshyltegård','meet:Q1-uppföljning kunder'],
+    22:['meet:Pipeline-review Adnan & Rasmus'],
+    28:['meet:Faktureringsdag maj','pay:Emmaboda Energi'],
+  };
+
+  const dHeaders = days.map(d=>`<div class="cal-dh">${d}</div>`).join('');
+  const totalCells = Math.ceil((dow+last.getDate())/7)*7;
+  let cells='';
+  for(let i=0;i<totalCells;i++){
+    const dayNum=i-dow+1;
+    const inMonth=dayNum>=1&&dayNum<=last.getDate();
+    const isToday=inMonth&&dayNum===29&&m===3&&y===2026;
+    const evs=(inMonth&&eventsMap[dayNum])||[];
+    const evHTML=evs.map(e=>{
+      const [type,label]=e.split(':');
+      return `<div class="cal-ev ${type==='pay'?'pay':''}">${label}</div>`;
+    }).join('');
+    const displayNum=inMonth?dayNum:dayNum<=0?new Date(y,m-2,0).getDate()+dayNum:dayNum-last.getDate();
+    cells+=`<div class="cal-d${inMonth?'':' om'}${isToday?' today':''}"><div class="cal-dn" style="${isToday?'color:var(--acc)':''}">${displayNum}</div>${evHTML}</div>`;
+  }
+
+  return `
+    <div class="cal-hd">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-g btn-sm" onclick="calNav(-1)">◀</button>
+        <span class="cal-month">${months[m-1]} ${y}</span>
+        <button class="btn btn-g btn-sm" onclick="calNav(1)">▶</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:10.5px;display:flex;align-items:center;gap:4px"><span style="width:9px;height:9px;background:var(--acc);border-radius:2px;display:inline-block"></span>Betalningar</span>
+        <span style="font-size:10.5px;display:flex;align-items:center;gap:4px"><span style="width:9px;height:9px;background:var(--pur);border-radius:2px;display:inline-block"></span>Möten</span>
+        <button class="btn btn-pur btn-sm" onclick="connectGcal()">🔗 Google Kalender</button>
+      </div>
+    </div>
+    <div class="cal-grid">${dHeaders}${cells}</div>`;
+}
+
+function calNav(d) {
+  S.calMon+=d;
+  if(S.calMon>12){S.calMon=1;S.calYear++;}
+  if(S.calMon<1){S.calMon=12;S.calYear--;}
+  render();
+}
+
+function connectGcal() {
+  showToast('Google Kalender: Lägg till OAuth-nyckel i inställningarna för att synka din kalender!');
+}
+
+// ═══════════════════════════════════════════════════════
+//  AI CHAT
+// ═══════════════════════════════════════════════════════
+async function aiSend() {
+  const inp = document.getElementById('ai-in');
+  if (!inp) return;
+  const msg = inp.value.trim();
+  if (!msg) return;
+  inp.value = '';
+  inp.disabled = true;
+
+  const c = clients[S.cu];
+  S.chat.push({role:'user', content:msg});
+
+  // Show loading
+  const msgs = document.getElementById('ai-msgs');
+  if (msgs) {
+    msgs.innerHTML += `<div class="ai-m usr">${msg}</div>`;
+    msgs.innerHTML += `<div class="ai-m bot" id="ai-loading"><span style="color:var(--dim)">Analyserar${c.n}...</span></div>`;
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  const sysPrompt = `Du är AI-affärsassistent för Samify, ett AI- och automationsbolag i Sverige (ZicLun AB).
+Medgrundarna är Adnan (sälj, marknad, affärsutveckling) och Rasmus (IT, produkt, sälj).
+
+Du har full kontext om kunden ${c.n}:
+- Tjänst: ${c.svc}
+- MRR: ${c.mrr} SEK/månad
+- Kontaktperson: ${c.ct}
+- Projektstatus: ${c.ph}% genomfört
+- Avtalsstart: ${c.cs}
+- Totalt avtalsvärde: ${c.cv} SEK
+- Beskrivning: ${c.desc}
+- Ansvarig: ${c.owner}
+
+Ge konkreta, direkta råd på svenska om:
+- Merförsäljning och upsell-möjligheter
+- Nästa steg i kundrelationen  
+- Nya idéer baserade på kundens profil
+- Risker och möjligheter
+
+Håll svaret kortfattat (3-5 meningar max), praktiskt och actionable.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: sysPrompt,
+        messages: S.chat.map(m => ({role:m.role, content:m.content.replace(/<[^>]*>/g,'')}))
+      })
+    });
+    const data = await res.json();
+    const reply = data.content?.[0]?.text || 'Kunde inte nå AI just nu.';
+    S.chat.push({role:'assistant', content:reply});
+    const loadEl = document.getElementById('ai-loading');
+    if (loadEl) loadEl.innerHTML = reply;
+  } catch(e) {
+    const loadEl = document.getElementById('ai-loading');
+    if (loadEl) loadEl.innerHTML = 'Kunde inte nå AI. Kontrollera anslutning.';
+    S.chat.push({role:'assistant', content:'Kunde inte nå AI.'});
+  }
+
+  if (inp) inp.disabled = false;
+  scrollAi();
+}
+
+function scrollAi() {
+  const el = document.getElementById('ai-msgs');
+  if (el) setTimeout(() => el.scrollTop = el.scrollHeight, 50);
+}
+
+// ═══════════════════════════════════════════════════════
+//  MODAL / TOAST
+// ═══════════════════════════════════════════════════════
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+}
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) closeModal();
+});
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:20px;right:20px;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:12px 18px;font-size:13px;z-index:300;animation:fadeIn .2s ease;max-width:300px;line-height:1.5';
+  t.innerHTML = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+// ═══════════════════════════════════════════════════════
+//  DRAG & DROP FOR FAKTUROR
+// ═══════════════════════════════════════════════════════
+function setupDragDrop() {
+  const dz = document.getElementById('dz');
+  if (!dz) return;
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('over');
+    const files = e.dataTransfer.files;
+    if (files.length > 0) simulateFaktAI(files[0].name);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+document.querySelectorAll('.ni').forEach(el => {
+  el.addEventListener('click', () => go(el.dataset.m));
+});
+
+// Re-setup drag/drop after render
+const origRender = render;
+window.render = function() {
+  origRender();
+  setupDragDrop();
+};
+
+render();
+</script>
+</body>
+</html>
