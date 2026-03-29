@@ -231,6 +231,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);disp
 .form-input{width:100%;background:var(--surf);border:1px solid var(--border);border-radius:7px;padding:9px 12px;color:var(--txt);font-family:'DM Sans',sans-serif;font-size:13px;outline:none}
 .form-input:focus{border-color:var(--acc)}
 
+/* NOTIFICATION BAR */
+.notif-bar{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:var(--r);padding:12px 16px;margin-bottom:16px}
+.notif-item{font-size:12.5px;line-height:1.6;padding:4px 0;border-bottom:1px solid rgba(251,191,36,.12);cursor:pointer}
+.notif-item:last-child{border-bottom:none}
+.notif-item:hover{color:var(--acc)}
+.notif-item.err{color:var(--err)}
+
 /* RESPONSIVE */
 @media(max-width:768px){
   .side{transform:translateX(-100%)}
@@ -240,6 +247,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);disp
   .g2{grid-template-columns:1fr}
   .g3{grid-template-columns:1fr 1fr}
   .cu-wrap{grid-template-columns:1fr;height:auto}
+  .cu-list{max-height:160px;overflow-y:auto;display:flex;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;border-radius:var(--r)}
+  .cu-item{min-width:130px;border-bottom:none;border-right:1px solid var(--border)}
+  .cu-item.on{border-left:none;border-bottom:3px solid var(--acc)}
   .topbar{padding:0 13px}
   .content{padding:13px}
   .mbtn{display:flex!important}
@@ -247,11 +257,24 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);disp
   .kb-board{height:calc(100vh - 180px)}
   .cal-grid .cal-d{min-height:56px}
   .cc-meta{gap:10px}
+  .modal{padding:18px;max-height:92vh}
+  .sgrid{gap:8px}
+  .sval{font-size:22px}
+  .tabs{gap:0}
+  .tab{padding:8px 10px;font-size:12px}
+  .tbl th,.tbl td{padding:8px 10px}
 }
 @media(max-width:480px){
   .sgrid{grid-template-columns:1fr}
   .g3{grid-template-columns:1fr}
   .sval{font-size:20px}
+  .kb-board{gap:7px}
+  .kb-col{min-width:190px}
+  .content{padding:10px}
+  .topbar{height:48px}
+  .side{width:200px;min-width:200px}
+  .notif-bar{padding:10px 12px}
+  .cal-grid{font-size:9px}
 }
 </style>
 </head>
@@ -375,6 +398,7 @@ let invoices  = [];
 let contracts = [];
 let pipeline  = [];
 let expenses  = [];
+let timeEntries = [];
 
 // Map Supabase rows → app format
 function mapClients(rows) {
@@ -411,22 +435,30 @@ function mapExpenses(rows) {
     cycle: r.billing_cycle, nextDate: r.next_date, st: r.status, note: r.note
   }));
 }
+function mapTimeEntries(rows) {
+  return rows.map(r => ({
+    id: r.id, cl: r.client_name, date: r.date,
+    hours: parseFloat(r.hours), desc: r.description, owner: r.owner
+  }));
+}
 
 async function loadData() {
   showLoading();
   try {
-    const [cl, inv, con, pip, exp] = await Promise.all([
+    const [cl, inv, con, pip, exp, te] = await Promise.all([
       sbGet('clients', 'order=mrr.desc'),
       sbGet('invoices', 'order=due_date.asc'),
       sbGet('contracts', 'order=end_date.asc'),
       sbGet('pipeline', 'order=created_at.desc'),
       sbGet('expenses', 'status=eq.active&order=next_date.asc'),
+      sbGet('time_entries', 'order=date.desc'),
     ]);
-    clients   = mapClients(cl);
-    invoices  = mapInvoices(inv);
-    contracts = mapContracts(con);
-    pipeline  = mapPipeline(pip);
-    expenses  = mapExpenses(exp);
+    clients     = mapClients(cl);
+    invoices    = mapInvoices(inv);
+    contracts   = mapContracts(con);
+    pipeline    = mapPipeline(pip);
+    expenses    = mapExpenses(exp);
+    timeEntries = mapTimeEntries(te);
   } catch(e) {
     console.error('Supabase load error:', e);
     showToast('⚠️ Kunde inte ladda data från Supabase');
@@ -542,16 +574,55 @@ function updateBadges() {
 }
 
 // ═══════════════════════════════════════════════════════
+//  NOTIFICATIONS — avtalsvarningar
+// ═══════════════════════════════════════════════════════
+function renderNotifications() {
+  const today = new Date();
+  const expiring = contracts.filter(c => {
+    const daysLeft = Math.round((new Date(c.en) - today) / (1000*60*60*24));
+    return daysLeft >= 0 && daysLeft <= 90;
+  });
+  const overdueInvs = invoices.filter(i => i.st === 'overdue');
+  if (!expiring.length && !overdueInvs.length) return '';
+
+  const items = [
+    ...expiring.map(c => {
+      const d = Math.round((new Date(c.en) - today) / (1000*60*60*24));
+      return `<div class="notif-item" onclick="go('avtal')">
+        🔔 <b>${c.cl}</b> — avtal löper ut om <b>${d} dagar</b> (${c.en}) · ${fmtSEK(c.sv)} kr/mån
+      </div>`;
+    }),
+    ...overdueInvs.map(i => `<div class="notif-item err" onclick="go('fakt')">
+      ⚠️ <b>${i.cl}</b> — förfallen faktura <b>${fmt(i.am)}</b> sedan ${i.due}
+    </div>`),
+  ].join('');
+
+  return `<div class="notif-bar" id="notif-bar">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+      <div style="flex:1">${items}</div>
+      <button onclick="document.getElementById('notif-bar').style.display='none'" style="background:none;border:none;color:var(--warn);cursor:pointer;font-size:16px;flex-shrink:0;padding:0">✕</button>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
 //  DASHBOARD
 // ═══════════════════════════════════════════════════════
 function renderDash() {
   const mrr = totalMRR();
   const arr = mrr * 12;
-  const mths = ['Okt','Nov','Dec','Jan','Feb','Mar'];
-  const mVals = [21500, 24200, 28800, 31200, 33500, mrr];
-  const maxV = Math.max(...mVals);
-  const bars = mVals.map((v,i) => `<div class="bar-w"><div class="bar" style="height:${Math.max(4,Math.round(v/maxV*88))}%"></div><div class="bar-l">${mths[i]}</div></div>`).join('');
+  const totalExp = expenses.reduce((a,e)=>a+e.amSEK,0);
+  const netMargin = mrr - totalExp;
 
+  // MRR per client bar chart
+  const topClients = [...clients].slice(0,6);
+  const maxMRR = topClients[0]?.mrr || 1;
+  const bars = topClients.map(c => `<div class="bar-w">
+    <div class="bar" style="height:${Math.max(4,Math.round(c.mrr/maxMRR*88))}%" title="${c.n}: ${fmtSEK(c.mrr)} kr"></div>
+    <div class="bar-l" style="font-size:8px;max-width:30px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.n.split(' ')[0]}</div>
+  </div>`).join('');
+
+  // Upcoming invoice payments
   const upcoming = [...invoices].filter(i=>i.st!=='paid').sort((a,b)=>new Date(a.due)-new Date(b.due)).slice(0,5);
   const tl = upcoming.map(i => {
     const d = new Date(i.due);
@@ -562,46 +633,73 @@ function renderDash() {
     </div>`;
   }).join('');
 
+  // Live insights from real data
+  const expiringContracts = contracts.filter(c => {
+    const d = Math.round((new Date(c.en) - new Date()) / (1000*60*60*24));
+    return d >= 0 && d <= 90;
+  });
+  const pipeOffers = pipeline.filter(p=>p.ph==='offert');
+  const totalHoursThisWeek = timeEntries.filter(t => {
+    const d = new Date(t.date);
+    const now = new Date();
+    const weekAgo = new Date(now - 7*24*60*60*1000);
+    return d >= weekAgo;
+  }).reduce((a,t)=>a+t.hours,0);
+
   const insights = [
-    `📈 MRR <b>${fmt(mrr)}/mån</b> — ökat <b>+56%</b> på 6 månader. Stark tillväxt!`,
-    `⚠️ <b>${invoices.filter(i=>i.st==='overdue').length} förfallen faktura</b> (${fmt(overdue())}) — skicka påminnelse till Olsfors.`,
-    `🔔 <b>3 avtal</b> löper ut inom 4 månader — initiera förnyelsediskussion nu.`,
-    `🎯 <b>${fmt(pipeActive())}</b> i aktivt pipeline — ${pipeline.filter(p=>p.ph==='offert').length} offert/ar ute för svar.`,
+    `📊 MRR <b>${fmt(mrr)}/mån</b> — netto efter kostnader: <b style="color:var(--ok)">${fmt(netMargin)}/mån</b> (${Math.round(netMargin/mrr*100)}% marginal)`,
+    overdue() > 0
+      ? `⚠️ <b>${invoices.filter(i=>i.st==='overdue').length} förfallen faktura</b> — ${fmt(overdue())} — skicka påminnelse nu`
+      : `✅ Inga förfallna fakturor — alla betalningar är à jour`,
+    expiringContracts.length > 0
+      ? `🔔 <b>${expiringContracts.length} avtal</b> löper ut inom 90 dagar — initiera förnyelse: ${expiringContracts.map(c=>c.cl.split(' ')[0]).join(', ')}`
+      : `✅ Inga avtal löper ut inom 90 dagar`,
+    pipeOffers.length > 0
+      ? `🎯 <b>${pipeOffers.length} offert/ar ute</b> (${fmt(pipeOffers.reduce((a,p)=>a+p.val,0))}) — följ upp aktivt`
+      : `📋 Inga offerter ute — dags att fylla pipeline`,
+    totalHoursThisWeek > 0
+      ? `⏱️ <b>${totalHoursThisWeek}h</b> loggat senaste 7 dagarna — fakturerbart underlag uppdaterat`
+      : `⏱️ Inga timmar loggade denna vecka`,
   ];
 
   return `
+    ${renderNotifications()}
     <div class="sgrid">
-      <div class="scard c-acc"><div class="slabel">MRR · Månadsintäkt</div><div class="sval">${fmtSEK(mrr)}</div><div class="sdelta up">↑ +8% vs förra månaden</div></div>
-      <div class="scard c-pur"><div class="slabel">ARR · Årsintäkt</div><div class="sval">${fmtSEK(arr)}</div><div class="sdelta">${clients.length} aktiva kunder</div></div>
-      <div class="scard c-warn"><div class="slabel">Väntande fakturor</div><div class="sval">${fmtSEK(pending())}</div><div class="sdelta">${invoices.filter(i=>i.st==='pending').length} ute</div></div>
+      <div class="scard c-acc"><div class="slabel">MRR · Månadsintäkt</div><div class="sval">${fmtSEK(mrr)}</div><div class="sdelta">${clients.length} aktiva kunder · live</div></div>
+      <div class="scard c-pur"><div class="slabel">ARR · Årsintäkt</div><div class="sval">${fmtSEK(arr)}</div><div class="sdelta">Netto: ${fmtSEK(netMargin)}/mån</div></div>
+      <div class="scard c-warn"><div class="slabel">Väntande fakturor</div><div class="sval">${fmtSEK(pending())}</div><div class="sdelta">${invoices.filter(i=>i.st==='pending').length} fakturor ute</div></div>
       <div class="scard c-ok"><div class="slabel">Pipeline-värde</div><div class="sval">${fmtSEK(pipeActive())}</div><div class="sdelta">${pipeline.filter(p=>p.ph!=='förlorad').length} aktiva deals</div></div>
     </div>
     <div class="g2" style="margin-bottom:14px">
       <div class="card">
-        <div class="card-hd"><span class="card-ht">MRR-tillväxt (6 mån)</span><span class="bdg bdg-ok">Live</span></div>
+        <div class="card-hd"><span class="card-ht">MRR per kund</span><span class="bdg bdg-ok">Live · Supabase</span></div>
         <div class="card-body">
-          <div style="font-size:10px;color:var(--dim);margin-bottom:6px">SEK / månad</div>
+          <div style="font-size:10px;color:var(--dim);margin-bottom:6px">SEK / månad · topp ${topClients.length} kunder</div>
           <div class="bars">${bars}</div>
-          <div style="text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--acc);margin-top:4px">+${fmtSEK(mrr-21500)} kr sedan okt</div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px">
+            <span style="font-size:10.5px;color:var(--dim)">Totalt ${clients.length} kunder</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--acc)">${fmt(mrr)}/mån</span>
+          </div>
         </div>
       </div>
       <div class="card">
         <div class="card-hd"><span class="card-ht">AI Intäktsprognos</span><span class="ai-pill"><span class="ai-dot"></span>Claude AI</span></div>
         <div class="card-body">
-          <div class="fi"><span class="fi-l">Prognos April 2026</span><span class="fi-v">${fmt(Math.round(mrr*1.06))}/mån</span></div>
+          <div class="fi"><span class="fi-l">Prognos nästa månad</span><span class="fi-v">${fmt(Math.round(mrr*1.06))}/mån</span></div>
           <div class="fi"><span class="fi-l">Prognos Q2 2026 (tot)</span><span class="fi-v">${fmt(Math.round(mrr*3.2))}</span></div>
           <div class="fi"><span class="fi-l">ARR-prognos helår 2026</span><span class="fi-v">${fmt(Math.round(arr*1.22))}</span></div>
           <div class="fi"><span class="fi-l">Konverterad pipeline (est.)</span><span class="fi-v">+${fmt(Math.round(pipeline.filter(p=>['offert','demo'].includes(p.ph)).reduce((a,p)=>a+p.val,0)/12))}/mån</span></div>
+          <div class="fi"><span class="fi-l">Kostnad/intäkt-ratio</span><span class="fi-v" style="color:${Math.round(totalExp/mrr*100)<30?'var(--ok)':'var(--warn)'}">${Math.round(totalExp/mrr*100)}%</span></div>
         </div>
       </div>
     </div>
     <div class="g2">
       <div class="card">
         <div class="card-hd"><span class="card-ht">Kommande betalningar</span><button class="btn btn-g btn-sm" onclick="go('fakt')">Visa alla</button></div>
-        <div class="card-body" style="padding:12px"><div class="tl">${tl}</div></div>
+        <div class="card-body" style="padding:12px"><div class="tl">${tl||'<div style="color:var(--faint);font-size:13px;padding:8px 0">Inga väntande fakturor</div>'}</div></div>
       </div>
       <div class="card">
-        <div class="card-hd"><span class="card-ht">AI-analys</span><span class="ai-pill"><span class="ai-dot"></span>Samify AI</span></div>
+        <div class="card-hd"><span class="card-ht">Live-analys</span><span class="bdg bdg-ok">Supabase data</span></div>
         <div class="card-body">${insights.map(s=>`<div class="ai-insight">${s}</div>`).join('')}</div>
       </div>
     </div>`;
@@ -880,7 +978,7 @@ function renderKund() {
       <div class="cu-mrr">${fmtSEK(cl.mrr)} kr/mån</div>
     </div>`).join('');
 
-  const tabs = ['Översikt','Projekt','Dokument','Kod','AI-assistent'];
+  const tabs = ['Översikt','Projekt','Tid','Dokument','Kod','AI-assistent'];
   const tabsHTML = tabs.map(t=>`<div class="tab${S.kTab===t?' on':''}" onclick="setKTab('${t}')">${t}</div>`).join('');
 
   let content = '';
@@ -931,6 +1029,34 @@ function renderKund() {
       <div class="card">
         <div class="card-hd"><span class="card-ht">Anteckningar & milstolpar</span><button class="btn btn-g btn-sm">+ Lägg till</button></div>
         <div class="card-body" style="color:var(--dim);font-size:13px;text-align:center;padding:24px 0">Inga anteckningar. Lägg till möten, beslut och milstolpar.</div>
+      </div>`;
+  } else if (t==='Tid') {
+    const clientEntries = timeEntries.filter(e=>e.cl===c.n).sort((a,b)=>new Date(b.date)-new Date(a.date));
+    const totalH = clientEntries.reduce((a,e)=>a+e.hours,0);
+    const adnanH = clientEntries.filter(e=>e.owner==='Adnan').reduce((a,e)=>a+e.hours,0);
+    const rasmusH = clientEntries.filter(e=>e.owner==='Rasmus').reduce((a,e)=>a+e.hours,0);
+    const rows = clientEntries.map(e=>`<tr>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:12px">${e.date}</td>
+      <td style="font-family:'JetBrains Mono',monospace;color:var(--acc)">${e.hours}h</td>
+      <td style="font-size:12.5px">${e.desc||'—'}</td>
+      <td><span class="bdg bdg-neu">${e.owner}</span></td>
+      <td><button class="btn btn-g btn-sm" onclick="deleteTimeEntry('${e.id}')">✕</button></td>
+    </tr>`).join('');
+    content = `
+      <div class="g3" style="margin-bottom:14px">
+        <div class="scard c-acc"><div class="slabel">Totalt loggat</div><div class="sval" style="font-size:20px">${totalH}h</div><div class="sdelta">${clientEntries.length} poster</div></div>
+        <div class="scard c-pur"><div class="slabel">Adnan</div><div class="sval" style="font-size:20px">${adnanH}h</div></div>
+        <div class="scard c-ok"><div class="slabel">Rasmus</div><div class="sval" style="font-size:20px">${rasmusH}h</div></div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ht">Tidslogg — ${c.n}</span>
+          <button class="btn btn-p btn-sm" onclick="showLogTimeModal('${c.n.replace(/'/g,"\\'")}')">+ Logga tid</button>
+        </div>
+        ${rows ? `<div style="overflow-x:auto"><table class="tbl">
+          <thead><tr><th>Datum</th><th>Tid</th><th>Beskrivning</th><th>Vem</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table></div>` : '<div class="card-body" style="color:var(--dim);font-size:13px;text-align:center;padding:24px 0">Inga tidspositioner loggade ännu</div>'}
       </div>`;
   } else if (t==='Dokument') {
     const docs = [{n:'Signerat avtal',ty:'PDF',dt:'2025-01-15',sz:'245 KB'},{n:'GDPR-DPA',ty:'PDF',dt:'2025-01-15',sz:'180 KB'},{n:'Teknisk specifikation',ty:'HTML',dt:'2025-01-20',sz:'42 KB'},{n:'Projektoffert',ty:'PDF',dt:'2025-01-10',sz:'320 KB'}];
@@ -1007,6 +1133,47 @@ const resp = await fetch(
 
 function selCu(i) { S.cu=i; S.chat=[]; S.kTab='Översikt'; render(); }
 function setKTab(t) { S.kTab=t; if(t!=='AI-assistent') S.chat=[]; render(); }
+
+function showLogTimeModal(clientName) {
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-title">⏱️ Logga tid — ${clientName}</div>
+    <div class="form-group"><label class="form-label">Datum</label>
+      <input class="form-input" id="lt-date" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
+    <div class="form-group"><label class="form-label">Antal timmar</label>
+      <input class="form-input" id="lt-hours" type="number" step="0.25" min="0.25" max="24" placeholder="1.5"></div>
+    <div class="form-group"><label class="form-label">Beskrivning</label>
+      <input class="form-input" id="lt-desc" placeholder="Vad gjordes?"></div>
+    <div class="form-group"><label class="form-label">Vem</label>
+      <select class="form-input" id="lt-owner">
+        <option value="Adnan">Adnan</option>
+        <option value="Rasmus">Rasmus</option>
+      </select></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-p" onclick="saveTimeEntry('${clientName.replace(/'/g,"\\'")}')">Spara</button>
+      <button class="btn btn-g" onclick="closeModal()">Avbryt</button>
+    </div>`;
+  document.getElementById('modal').classList.add('show');
+}
+
+async function saveTimeEntry(clientName) {
+  const date  = document.getElementById('lt-date').value;
+  const hours = parseFloat(document.getElementById('lt-hours').value);
+  const desc  = document.getElementById('lt-desc').value;
+  const owner = document.getElementById('lt-owner').value;
+  if (!date || !hours) return;
+  closeModal();
+  const rows = await sbPost('time_entries', {client_name:clientName, date, hours, description:desc, owner});
+  if (rows && rows[0]) timeEntries.unshift(mapTimeEntries([rows[0]])[0]);
+  else timeEntries.unshift({id:Date.now(), cl:clientName, date, hours, desc, owner});
+  render();
+  showToast(`✓ ${hours}h loggat för ${clientName}`);
+}
+
+async function deleteTimeEntry(id) {
+  timeEntries = timeEntries.filter(e=>e.id!==id);
+  render();
+  await sbDelete('time_entries', id);
+}
 
 // ═══════════════════════════════════════════════════════
 //  PIPELINE
