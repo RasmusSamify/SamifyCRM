@@ -231,6 +231,29 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);disp
 .form-input{width:100%;background:var(--surf);border:1px solid var(--border);border-radius:7px;padding:9px 12px;color:var(--txt);font-family:'DM Sans',sans-serif;font-size:13px;outline:none}
 .form-input:focus{border-color:var(--acc)}
 
+/* DEMO MODE */
+.demo-badge{background:linear-gradient(135deg,#f0a020,#ff6b35);color:#000;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;letter-spacing:.5px;cursor:pointer;transition:opacity .15s;border:none;font-family:'DM Sans',sans-serif}
+.demo-badge:hover{opacity:.8}
+body.demo-active .logo-name::after{content:' DEMO';font-size:9px;color:#ff6b35;margin-left:4px}
+
+/* HEALTH METER */
+.health-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:700}
+.health-hi{background:rgba(52,211,153,.13);color:var(--ok)}
+.health-md{background:rgba(251,191,36,.13);color:var(--warn)}
+.health-lo{background:rgba(248,113,113,.13);color:var(--err)}
+
+/* ACTIVITY LOG */
+.act-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.act-item:last-child{border-bottom:none}
+.act-ico{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;margin-top:2px}
+.act-body{flex:1;min-width:0}
+.act-text{font-size:13px;line-height:1.6}
+.act-meta{font-size:10px;color:var(--faint);margin-top:2px}
+
+/* MEETING BRIEF */
+.brief-btn{background:var(--pur2);border:none;color:var(--pur);font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif}
+.brief-btn:hover{background:rgba(139,128,255,.2)}
+
 /* NOTIFICATION BAR */
 .notif-bar{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:var(--r);padding:12px 16px;margin-bottom:16px}
 .notif-item{font-size:12.5px;line-height:1.6;padding:4px 0;border-bottom:1px solid rgba(251,191,36,.12);cursor:pointer}
@@ -347,6 +370,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);disp
     <span class="topbar-title" id="pt">Dashboard</span>
     <div class="topbar-r">
       <div class="ai-pill"><span class="ai-dot"></span>Samify AI aktiv</div>
+      <button class="demo-badge" onclick="toggleDemo()" id="demo-btn">🎭 Demo</button>
       <div class="ava" title="Adnan & Rasmus">SA</div>
     </div>
   </header>
@@ -399,6 +423,41 @@ let contracts = [];
 let pipeline  = [];
 let expenses  = [];
 let timeEntries = [];
+let activityLog = [];
+
+// ─── DEMO DATA ───────────────────────────────────────────
+const DEMO = {
+  clients:[
+    {id:'d1',n:'Bergström Consulting AB',mrr:18500,ph:85,ct:'Erik Bergström',svc:'AI-agent + Dokumentautomation',cs:'2025-09-01',cv:222000,desc:'Advokatbyrå — automatiserar kontraktsgranskning och klientkommunikation med AI.',owner:'Adnan',email:'erik@bergstrom.se'},
+    {id:'d2',n:'Nordic Solar Group',mrr:9900,ph:100,ct:'Maja Lindström',svc:'Chatbot + CRM-integration',cs:'2025-11-01',cv:118800,desc:'Solenergiföretag — AI-chatbot hanterar offertförfrågningar dygnet runt.',owner:'Rasmus',email:'maja@nordicsolar.se'},
+    {id:'d3',n:'Kalmar Logistik AB',mrr:6500,ph:65,ct:'Johan Ström',svc:'Orderbot + Notifikationer',cs:'2026-01-01',cv:78000,desc:'Logistikbolag — automatiserar orderstatus och kundnotifieringar.',owner:'Adnan',email:'johan@kalmarlogistik.se'},
+    {id:'d4',n:'Glastech Syd AB',mrr:4200,ph:100,ct:'Marie Holm',svc:'Intern AI-assistent',cs:'2025-10-01',cv:50400,desc:'Glashantverk — intern kunskapsbot för tekniska specifikationer.',owner:'Rasmus',email:'marie@glastech.se'},
+  ],
+  invoices:[
+    {id:'di1',cl:'Bergström Consulting AB',am:18500,due:'2026-04-01',st:'pending',cat:'Månadsavgift April'},
+    {id:'di2',cl:'Nordic Solar Group',am:9900,due:'2026-04-05',st:'pending',cat:'Månadsavgift April'},
+    {id:'di3',cl:'Kalmar Logistik AB',am:6500,due:'2026-03-28',st:'overdue',cat:'Månadsavgift Mars'},
+    {id:'di4',cl:'Glastech Syd AB',am:4200,due:'2026-04-01',st:'paid',cat:'Månadsavgift April'},
+  ],
+  pipeline:[
+    {id:'dp1',co:'Sydkraft Energi AB',ct:'Anna Pär',val:144000,ph:'offert',dt:'2026-03-20',note:'Stor offert ute — beslut inom 2 veckor'},
+    {id:'dp2',co:'Linné Fastigheter',ct:'Björn Lund',val:72000,ph:'demo',dt:'2026-03-25',note:'Demo bokad 10 april — mycket intresserad'},
+    {id:'dp3',co:'Coastline Bygg',ct:'Sara Kvist',val:48000,ph:'kontaktad',dt:'2026-03-28',note:'Inbound lead via LinkedIn'},
+    {id:'dp4',co:'TechHub Malmö',ct:'Lars Nord',val:96000,ph:'uppföljning',dt:'2026-03-22',note:'Följ upp efter påsk'},
+  ],
+  timeEntries:[
+    {id:'dt1',cl:'Bergström Consulting AB',date:'2026-03-27',hours:3,desc:'Byggt kontraktsgranskning v2',owner:'Adnan'},
+    {id:'dt2',cl:'Nordic Solar Group',date:'2026-03-26',hours:1.5,desc:'Support + ny FAQ-kategori',owner:'Rasmus'},
+    {id:'dt3',cl:'Kalmar Logistik AB',date:'2026-03-28',hours:2,desc:'Orderbot-integration Ongoing',owner:'Adnan'},
+  ],
+  activityLog:[
+    {id:'da1',client_name:'Bergström Consulting AB',type:'next_step',content:'Skicka roadmap för modul 2 (avtalsanalys) senast 12 april.',owner:'Adnan',created_at:'2026-03-28T10:00:00Z'},
+    {id:'da2',client_name:'Nordic Solar Group',type:'meeting',content:'Möte med Maja — vill lägga till flerspråkigt stöd i chatboten.',owner:'Rasmus',created_at:'2026-03-26T14:00:00Z'},
+    {id:'da3',deal_company:'Sydkraft Energi AB',type:'note',content:'Offert på 144 000 kr skickad. Konkurrerar mot Accenture.',owner:'Adnan',created_at:'2026-03-20T09:00:00Z'},
+  ],
+};
+
+let S_demoMode = false;
 
 // Map Supabase rows → app format
 function mapClients(rows) {
@@ -441,17 +500,25 @@ function mapTimeEntries(rows) {
     hours: parseFloat(r.hours), desc: r.description, owner: r.owner
   }));
 }
+function mapActivityLog(rows) {
+  return rows.map(r => ({
+    id: r.id, cl: r.client_name||null, deal: r.deal_company||null,
+    type: r.type, content: r.content, owner: r.owner,
+    at: r.created_at
+  }));
+}
 
 async function loadData() {
   showLoading();
   try {
-    const [cl, inv, con, pip, exp, te] = await Promise.all([
+    const [cl, inv, con, pip, exp, te, al] = await Promise.all([
       sbGet('clients', 'order=mrr.desc'),
       sbGet('invoices', 'order=due_date.asc'),
       sbGet('contracts', 'order=end_date.asc'),
       sbGet('pipeline', 'order=created_at.desc'),
       sbGet('expenses', 'status=eq.active&order=next_date.asc'),
       sbGet('time_entries', 'order=date.desc'),
+      sbGet('activity_log', 'order=created_at.desc'),
     ]);
     clients     = mapClients(cl);
     invoices    = mapInvoices(inv);
@@ -459,6 +526,7 @@ async function loadData() {
     pipeline    = mapPipeline(pip);
     expenses    = mapExpenses(exp);
     timeEntries = mapTimeEntries(te);
+    activityLog = mapActivityLog(al);
   } catch(e) {
     console.error('Supabase load error:', e);
     showToast('⚠️ Kunde inte ladda data från Supabase');
@@ -484,9 +552,51 @@ const kbCols = [
   {id:'förlorad', label:'Förlorad', color:'var(--err)'},
 ];
 
-// ═══════════════════════════════════════════════════════
-//  STATE
-// ═══════════════════════════════════════════════════════
+// ─── DEMO MODE ───────────────────────────────────────────
+let _liveData = {};
+function toggleDemo() {
+  S_demoMode = !S_demoMode;
+  const btn = document.getElementById('demo-btn');
+  if (S_demoMode) {
+    _liveData = {clients:[...clients],invoices:[...invoices],pipeline:[...pipeline],timeEntries:[...timeEntries],activityLog:[...activityLog]};
+    clients = DEMO.clients; invoices = DEMO.invoices; pipeline = DEMO.pipeline;
+    timeEntries = DEMO.timeEntries; activityLog = DEMO.activityLog;
+    document.body.classList.add('demo-active');
+    if (btn) { btn.textContent = '✕ Avsluta demo'; btn.style.background = 'var(--err)'; }
+    showToast('🎭 Demo-läge aktiverat — visar exempeldata');
+  } else {
+    clients = _liveData.clients; invoices = _liveData.invoices; pipeline = _liveData.pipeline;
+    timeEntries = _liveData.timeEntries; activityLog = _liveData.activityLog;
+    document.body.classList.remove('demo-active');
+    if (btn) { btn.textContent = '🎭 Demo'; btn.style.background = ''; }
+    showToast('✓ Tillbaka till live-data');
+  }
+  render();
+}
+
+// ─── KLIENTHÄLSA ─────────────────────────────────────────
+function calcHealth(client) {
+  let score = 100;
+  const reasons = [];
+  // Overdue invoice?
+  if (invoices.some(i=>i.cl===client.n && i.st==='overdue')) { score-=30; reasons.push('Förfallen faktura'); }
+  // Contract expiring <90d?
+  const contract = contracts.find(c=>c.cl===client.n);
+  if (contract) {
+    const daysLeft = Math.round((new Date(contract.en)-new Date())/(1000*60*60*24));
+    if (daysLeft<90 && daysLeft>=0) { score-=20; reasons.push(`Avtal löper ut om ${daysLeft}d`); }
+  }
+  // No activity in 30 days?
+  const lastAct = activityLog.filter(a=>a.cl===client.n).sort((a,b)=>new Date(b.at)-new Date(a.at))[0];
+  if (!lastAct || (new Date()-new Date(lastAct.at))>30*24*60*60*1000) { score-=15; reasons.push('Ingen aktivitet på 30+ dagar'); }
+  // No time entries in 14 days?
+  const lastTime = timeEntries.filter(t=>t.cl===client.n).sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
+  if (!lastTime || (new Date()-new Date(lastTime.date))>14*24*60*60*1000) { score-=10; reasons.push('Inget arbete loggat på 14+ dagar'); }
+  score = Math.max(0, score);
+  const cls = score>=80?'health-hi':score>=50?'health-md':'health-lo';
+  const emoji = score>=80?'✓':score>=50?'⚠':'⛔';
+  return {score, cls, emoji, reasons};
+}
 const S = {
   mod: 'dash',
   cu: 0,
@@ -972,24 +1082,41 @@ function addContract() {
 // ═══════════════════════════════════════════════════════
 function renderKund() {
   const c = clients[S.cu];
-  const cuList = clients.map((cl,i) => `
-    <div class="cu-item${i===S.cu?' on':''}" onclick="selCu(${i})">
-      <div class="cu-name">${cl.n}</div>
+  const cuList = clients.map((cl,i) => {
+    const h = calcHealth(cl);
+    return `<div class="cu-item${i===S.cu?' on':''}" onclick="selCu(${i})">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:4px">
+        <div class="cu-name">${cl.n}</div>
+        <span class="health-pill ${h.cls}" style="font-size:9px;padding:1px 5px">${h.emoji}</span>
+      </div>
       <div class="cu-mrr">${fmtSEK(cl.mrr)} kr/mån</div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
-  const tabs = ['Översikt','Projekt','Tid','Dokument','Kod','AI-assistent'];
+  const tabs = ['Översikt','Projekt','Tid','Logg','Lönsamhet','Kod','AI-assistent'];
   const tabsHTML = tabs.map(t=>`<div class="tab${S.kTab===t?' on':''}" onclick="setKTab('${t}')">${t}</div>`).join('');
 
   let content = '';
   const t = S.kTab;
 
   if (t==='Översikt') {
+    const h = calcHealth(c);
+    const hBar = `<div style="height:4px;background:var(--border2);border-radius:2px;overflow:hidden;margin-top:6px"><div style="height:100%;width:${h.score}%;background:${h.score>=80?'var(--ok)':h.score>=50?'var(--warn)':'var(--err)'};border-radius:2px;transition:width .6s"></div></div>`;
     content = `
       <div class="g3" style="margin-bottom:14px">
         <div class="scard c-acc"><div class="slabel">MRR</div><div class="sval" style="font-size:20px">${fmtSEK(c.mrr)}</div><div class="sdelta">kr / månad</div></div>
         <div class="scard c-pur"><div class="slabel">Avtalsvärde</div><div class="sval" style="font-size:20px">${fmtSEK(c.cv)}</div><div class="sdelta">totalt</div></div>
         <div class="scard c-ok"><div class="slabel">Projektstatus</div><div class="sval" style="font-size:20px">${c.ph}%</div><div class="prog" style="margin-top:7px"><div class="prog-f" style="width:${c.ph}%"></div></div></div>
+      </div>
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-hd">
+          <span class="card-ht">Klienthälsa</span>
+          <span class="health-pill ${h.cls}">${h.emoji} ${h.score}/100</span>
+        </div>
+        <div class="card-body">
+          ${hBar}
+          ${h.reasons.length ? `<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:5px">${h.reasons.map(r=>`<span class="bdg bdg-warn" style="font-size:10px">⚠ ${r}</span>`).join('')}</div>` : '<div style="color:var(--ok);font-size:12.5px;margin-top:8px">✓ Allt ser bra ut för denna kund</div>'}
+        </div>
       </div>
       <div class="card" style="margin-bottom:12px">
         <div class="card-hd"><span class="card-ht">Kundinfo</span><span class="bdg bdg-neu">${c.owner}</span></div>
@@ -1057,6 +1184,51 @@ function renderKund() {
           <thead><tr><th>Datum</th><th>Tid</th><th>Beskrivning</th><th>Vem</th><th></th></tr></thead>
           <tbody>${rows}</tbody>
         </table></div>` : '<div class="card-body" style="color:var(--dim);font-size:13px;text-align:center;padding:24px 0">Inga tidspositioner loggade ännu</div>'}
+      </div>`;
+  } else if (t==='Logg') {
+    const logs = activityLog.filter(a=>a.cl===c.n).sort((a,b)=>new Date(b.at)-new Date(a.at));
+    const typeIco = {note:'📝',decision:'✅',next_step:'➡️',meeting:'🤝',email:'📧'};
+    const typeLabel = {note:'Anteckning',decision:'Beslut',next_step:'Nästa steg',meeting:'Möte',email:'E-post'};
+    const typeBg = {note:'var(--border)',decision:'var(--pur2)',next_step:'var(--acc2)',meeting:'rgba(52,211,153,.12)',email:'var(--pur2)'};
+    const logRows = logs.map(a=>`<div class="act-item">
+      <div class="act-ico" style="background:${typeBg[a.type]||'var(--border)'}">${typeIco[a.type]||'📝'}</div>
+      <div class="act-body">
+        <div class="act-text">${a.content}</div>
+        <div class="act-meta">${typeLabel[a.type]||a.type} · ${a.owner} · ${new Date(a.at).toLocaleDateString('sv-SE')}</div>
+      </div>
+    </div>`).join('');
+    content = `<div class="card">
+      <div class="card-hd">
+        <span class="card-ht">Aktivitetslogg — ${c.n}</span>
+        <button class="btn btn-p btn-sm" onclick="showAddActivityModal('${c.n.replace(/'/g,"\\'")}',null)">+ Lägg till</button>
+      </div>
+      <div class="card-body" style="padding:8px 17px">
+        ${logRows||'<div style="color:var(--faint);font-size:13px;padding:16px 0;text-align:center">Inga aktiviteter loggade ännu</div>'}
+      </div>
+    </div>`;
+  } else if (t==='Lönsamhet') {
+    const clientTE = timeEntries.filter(e=>e.cl===c.n);
+    const totalH = clientTE.reduce((a,e)=>a+e.hours,0);
+    const internalRate = 850; // kr/h intern kostnad
+    const costH = Math.round(totalH * internalRate);
+    const grossMargin = c.mrr - costH;
+    const marginPct = totalH > 0 ? Math.round((grossMargin/c.mrr)*100) : 100;
+    const impliedRate = totalH > 0 ? Math.round(c.mrr/totalH) : 0;
+    content = `
+      <div class="g3" style="margin-bottom:14px">
+        <div class="scard c-acc"><div class="slabel">MRR</div><div class="sval" style="font-size:19px">${fmtSEK(c.mrr)}</div><div class="sdelta">intäkt/mån</div></div>
+        <div class="scard ${grossMargin>=0?'c-ok':'c-err'}"><div class="slabel">Bruttomarginal</div><div class="sval" style="font-size:19px;color:${grossMargin>=0?'var(--ok)':'var(--err)'}">${fmtSEK(grossMargin)}</div><div class="sdelta">${marginPct}% marginal</div></div>
+        <div class="scard c-pur"><div class="slabel">Timkostnad/mån</div><div class="sval" style="font-size:19px">${fmtSEK(costH)}</div><div class="sdelta">${totalH}h à ${fmtSEK(internalRate)} kr</div></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><span class="card-ht">Lönsamhetsanalys</span><button class="btn btn-g btn-sm" onclick="setKTab('Tid')">Logga tid</button></div>
+        <div class="card-body">
+          <div class="fi"><span class="fi-l">Totalt loggade timmar</span><span style="font-family:'JetBrains Mono',monospace">${totalH}h</span></div>
+          <div class="fi"><span class="fi-l">Intern timkostnad (à 850 kr/h)</span><span style="font-family:'JetBrains Mono',monospace;color:var(--err)">-${fmtSEK(costH)} kr</span></div>
+          <div class="fi"><span class="fi-l">Effektiv timintäkt</span><span style="font-family:'JetBrains Mono',monospace;color:var(--acc)">${impliedRate>0?fmtSEK(impliedRate)+' kr/h':'Sätt timmar för att räkna'}</span></div>
+          <div class="fi"><span class="fi-l">Bruttomarginal denna månaden</span><span style="font-family:'JetBrains Mono',monospace;color:${grossMargin>=0?'var(--ok)':'var(--err)'}">${fmtSEK(grossMargin)} kr</span></div>
+          ${totalH===0?'<div style="color:var(--faint);font-size:12px;margin-top:10px;padding:10px;background:var(--surf);border-radius:6px">Logga timmar under Tid-fliken för att se lönsamhetsberäkning.</div>':''}
+        </div>
       </div>`;
   } else if (t==='Dokument') {
     const docs = [{n:'Signerat avtal',ty:'PDF',dt:'2025-01-15',sz:'245 KB'},{n:'GDPR-DPA',ty:'PDF',dt:'2025-01-15',sz:'180 KB'},{n:'Teknisk specifikation',ty:'HTML',dt:'2025-01-20',sz:'42 KB'},{n:'Projektoffert',ty:'PDF',dt:'2025-01-10',sz:'320 KB'}];
@@ -1175,6 +1347,48 @@ async function deleteTimeEntry(id) {
   await sbDelete('time_entries', id);
 }
 
+// ─── AKTIVITETSLOGG ───────────────────────────────────────
+function showAddActivityModal(clientName, dealCompany) {
+  const forLabel = clientName || dealCompany;
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-title">📝 Ny aktivitet — ${forLabel}</div>
+    <div class="form-group"><label class="form-label">Typ</label>
+      <select class="form-input" id="al-type">
+        <option value="note">📝 Anteckning</option>
+        <option value="decision">✅ Beslut</option>
+        <option value="next_step">➡️ Nästa steg</option>
+        <option value="meeting">🤝 Möte</option>
+        <option value="email">📧 E-post</option>
+      </select></div>
+    <div class="form-group"><label class="form-label">Innehåll</label>
+      <textarea class="form-input" id="al-content" rows="3" placeholder="Beskriv vad som hände / vad som ska göras..." style="resize:vertical"></textarea></div>
+    <div class="form-group"><label class="form-label">Vem</label>
+      <select class="form-input" id="al-owner">
+        <option>Adnan</option><option>Rasmus</option>
+      </select></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-p" onclick="saveActivity('${(clientName||'').replace(/'/g,"\\'")}','${(dealCompany||'').replace(/'/g,"\\'")}')">Spara</button>
+      <button class="btn btn-g" onclick="closeModal()">Avbryt</button>
+    </div>`;
+  document.getElementById('modal').classList.add('show');
+}
+
+async function saveActivity(clientName, dealCompany) {
+  const type    = document.getElementById('al-type').value;
+  const content = document.getElementById('al-content').value.trim();
+  const owner   = document.getElementById('al-owner').value;
+  if (!content) return;
+  closeModal();
+  const body = {type, content, owner};
+  if (clientName)  body.client_name  = clientName;
+  if (dealCompany) body.deal_company = dealCompany;
+  const rows = await sbPost('activity_log', body);
+  const entry = rows?.[0] ? mapActivityLog([rows[0]])[0] : {id:Date.now(), cl:clientName||null, deal:dealCompany||null, type, content, owner, at:new Date().toISOString()};
+  activityLog.unshift(entry);
+  render();
+  showToast(`✓ Aktivitet sparad`);
+}
+
 // ═══════════════════════════════════════════════════════
 //  PIPELINE
 // ═══════════════════════════════════════════════════════
@@ -1273,6 +1487,7 @@ function showDealDetail(co) {
       <select class="form-input" id="mv-ph" style="flex:1">${kbCols.map(c=>`<option value="${c.id}"${c.id===deal.ph?' selected':''}>${c.label}</option>`).join('')}</select>
       <button class="btn btn-p" onclick="moveDeal('${deal.co}')">Flytta fas</button>
       <button class="btn btn-pur" onclick="bookMeetingFromDeal('${deal.co}')">📅 Boka möte</button>
+      <button class="btn btn-g" onclick="showAddActivityModal(null,'${deal.co.replace(/'/g,"\\'")}')">📝 Logg</button>
       <button class="btn btn-g" onclick="closeModal()">Stäng</button>
     </div>`;
   document.getElementById('modal').classList.add('show');
@@ -1622,10 +1837,16 @@ function renderKal() {
   const upcoming = gcalEvents.filter(ev=>new Date(ev.date)>=today).slice(0,6);
   const upcomingHTML = upcoming.map(ev=>{
     const d=new Date(ev.date);
-    return `<div class="tl-item" style="cursor:pointer" onclick="window.open('${ev.link}','_blank')">
+    return `<div class="tl-item">
       <div class="tl-date"><div class="tl-day" style="color:var(--pur)">${d.getDate()}</div><div class="tl-mon">${d.toLocaleDateString('sv-SE',{month:'short'})}</div></div>
-      <div class="tl-info"><div class="tl-cl">${ev.title}</div><div class="tl-ds">${ev.time} · Klicka för att öppna</div></div>
-      <div style="font-size:10px;color:var(--pur)">↗</div>
+      <div class="tl-info" style="cursor:pointer" onclick="window.open('${ev.link}','_blank')">
+        <div class="tl-cl">${ev.title}</div>
+        <div class="tl-ds">${ev.time} · info@samify.se</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+        <button class="brief-btn" onclick="showMeetingBrief('${ev.title.replace(/'/g,"\\'")}','${ev.date}','${ev.time}')">🤖 Brief</button>
+        <div style="font-size:10px;color:var(--dim);cursor:pointer" onclick="window.open('${ev.link}','_blank')">↗ GCal</div>
+      </div>
     </div>`;
   }).join('');
 
@@ -1663,6 +1884,59 @@ function calNav(d) {
   if(S.calMon>12){S.calMon=1;S.calYear++;}
   if(S.calMon<1){S.calMon=12;S.calYear--;}
   render();
+}
+
+// ─── AI MEETING BRIEF ─────────────────────────────────────
+async function showMeetingBrief(title, date, time) {
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-title">🤖 AI Meeting Brief</div>
+    <div style="color:var(--dim);font-size:13px;margin-bottom:10px">${title} · ${date} kl ${time}</div>
+    <div id="brief-content" style="color:var(--dim);font-size:13px;line-height:1.7">
+      <div style="display:flex;align-items:center;gap:8px"><div style="width:16px;height:16px;border:2px solid var(--pur);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite"></div>AI genererar brief...</div>
+    </div>
+    <div style="margin-top:16px"><button class="btn btn-g" onclick="closeModal()">Stäng</button></div>`;
+  document.getElementById('modal').classList.add('show');
+
+  // Find matching client from meeting title
+  const matchedClient = clients.find(c => title.toLowerCase().includes(c.n.toLowerCase().split(' ')[0].toLowerCase()));
+  const clientContext = matchedClient ? `
+Kund i CRM: ${matchedClient.n}
+MRR: ${fmtSEK(matchedClient.mrr)} kr/mån
+Kontakt: ${matchedClient.ct}
+Tjänst: ${matchedClient.svc}
+Projektstatus: ${matchedClient.ph}%
+${invoices.filter(i=>i.cl===matchedClient.n&&i.st!=='paid').length>0?'⚠️ Har väntande/förfallna fakturor':'Inga öppna fakturor'}
+
+Senaste aktiviteter:
+${activityLog.filter(a=>a.cl===matchedClient.n).slice(0,3).map(a=>`- ${a.content} (${a.type}, ${new Date(a.at).toLocaleDateString('sv-SE')})`).join('\n')||'Inga loggade aktiviteter'}` : 'Okänd motpart — troligen ny prospect.';
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: `Du är AI-assistent för Samify (ZicLun AB) i Kalmar. Skriv en kort och skarp mötesbrief på svenska. 
+Format:
+🎯 **Syfte** — vad vill vi uppnå på detta möte?
+📋 **Bakgrund** — vad vet vi om motparten?
+⚡ **Viktigt att driva** — 2-3 konkreta punkter
+⚠️ **Bevaka** — risker eller känsliga frågor
+✅ **Önskat nästa steg** — vad ska hända efter mötet?
+
+Håll det kort och actionable. Max 200 ord totalt.`,
+        messages: [{role:'user', content:`Möte: "${title}"\nDatum: ${date} kl ${time}\n\n${clientContext}`}]
+      })
+    });
+    const data = await res.json();
+    const brief = data.content?.[0]?.text || 'Kunde inte generera brief.';
+    const el = document.getElementById('brief-content');
+    if (el) el.innerHTML = brief.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>');
+  } catch(e) {
+    const el = document.getElementById('brief-content');
+    if (el) el.innerHTML = '<span style="color:var(--err)">Kunde inte nå AI — kontrollera anslutning.</span>';
+  }
 }
 
 function bookNewMeeting(prefill) {
