@@ -194,6 +194,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);disp
 .ai-insight{padding:10px 0;border-bottom:1px solid var(--border);font-size:12.5px;line-height:1.65}
 .ai-insight:last-child{border-bottom:none}
 
+/* KANBAN DRAG & DROP */
+.kb-card[draggable]{cursor:grab}
+.kb-card[draggable]:active{cursor:grabbing}
+.kb-card.dragging{opacity:.35;transform:scale(.97);border-style:dashed}
+.kb-cards.drag-over{background:rgba(240,160,32,.06);border-radius:8px;outline:2px dashed var(--acc);outline-offset:-4px}
+.kb-col.drag-over .kb-cards{background:rgba(240,160,32,.06);border-radius:8px;outline:2px dashed var(--acc);outline-offset:-4px}
+
 /* CODE */
 .code-block{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:13px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ok);overflow-x:auto;white-space:pre;line-height:1.7;margin-bottom:12px}
 
@@ -385,6 +392,8 @@ const S = {
   fTab: 'lista',
   chat: [],
   calMon: 3, calYear: 2026,
+  dragCo: null,   // company name being dragged
+  dragging: false,
 };
 
 const titles = {dash:'Dashboard',fakt:'Fakturor',avtal:'Avtal & Kontrakt',kund:'Kunder',pipe:'Pipeline',kal:'Kalender'};
@@ -865,19 +874,34 @@ function renderPipe() {
   const cols = kbCols.map(col => {
     const cards = pipeline.filter(p=>p.ph===col.id);
     const colTotal = cards.reduce((a,p)=>a+p.val,0);
-    const cardHTML = cards.map(p=>`<div class="kb-card" onclick="showDealDetail('${p.co}')">
-      <div class="kb-co">${p.co}</div>
+    const cardHTML = cards.map(p=>`<div
+      class="kb-card"
+      draggable="true"
+      data-co="${p.co.replace(/"/g,'&quot;')}"
+      ondragstart="kbDragStart(event,'${p.co.replace(/'/g,"\\'")}' )"
+      ondragend="kbDragEnd(event)"
+      onclick="kbCardClick(event,'${p.co.replace(/'/g,"\\'")}' )"
+    >
+      <div style="display:flex;align-items:center;gap:5px;margin-bottom:2px">
+        <span style="font-size:9px;color:var(--faint);cursor:grab">⠿⠿</span>
+        <div class="kb-co">${p.co}</div>
+      </div>
       <div class="kb-ct">${p.ct}</div>
       <div class="kb-note">${p.note}</div>
       <div class="kb-val">${fmt(p.val)}</div>
       <div class="kb-dt">${p.dt}</div>
     </div>`).join('');
-    return `<div class="kb-col">
+    return `<div class="kb-col" data-ph="${col.id}">
       <div class="kb-hd">
         <span class="kb-ht" style="color:${col.color}">${col.label}</span>
         <span class="kb-cnt">${cards.length}</span>
       </div>
-      <div class="kb-cards">${cardHTML||'<div style="padding:16px;text-align:center;font-size:11px;color:var(--faint)">Tom</div>'}</div>
+      <div class="kb-cards"
+        data-ph="${col.id}"
+        ondragover="kbDragOver(event)"
+        ondragleave="kbDragLeave(event)"
+        ondrop="kbDrop(event,'${col.id}')"
+      >${cardHTML||`<div class="kb-drop-hint" style="padding:16px;text-align:center;font-size:11px;color:var(--faint)">Tom</div>`}</div>
       ${colTotal>0?`<div class="kb-footer" style="font-family:\'JetBrains Mono\',monospace;font-size:10.5px;color:var(--acc);text-align:center">${fmt(colTotal)}</div>`:''}
     </div>`;
   }).join('');
@@ -947,6 +971,58 @@ function moveDeal(co) {
   const newPh = document.getElementById('mv-ph').value;
   if (deal) deal.ph = newPh;
   closeModal(); render();
+}
+
+// ─── KANBAN DRAG & DROP ───────────────────────────────
+function kbDragStart(e, co) {
+  S.dragCo = co;
+  S.dragging = true;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', co);
+  // Slight delay so the card renders before it fades
+  setTimeout(() => { if(e.target) e.target.classList.add('dragging'); }, 0);
+}
+
+function kbDragEnd(e) {
+  S.dragging = false;
+  S.dragCo = null;
+  if (e.target) e.target.classList.remove('dragging');
+  document.querySelectorAll('.kb-cards').forEach(el => el.classList.remove('drag-over'));
+}
+
+function kbDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const col = e.currentTarget;
+  col.classList.add('drag-over');
+}
+
+function kbDragLeave(e) {
+  // Only remove if actually leaving the column (not entering a child)
+  const col = e.currentTarget;
+  if (!col.contains(e.relatedTarget)) {
+    col.classList.remove('drag-over');
+  }
+}
+
+function kbDrop(e, ph) {
+  e.preventDefault();
+  document.querySelectorAll('.kb-cards').forEach(el => el.classList.remove('drag-over'));
+  const co = S.dragCo || e.dataTransfer.getData('text/plain');
+  if (!co) return;
+  const deal = pipeline.find(p => p.co === co);
+  if (deal && deal.ph !== ph) {
+    deal.ph = ph;
+    const col = kbCols.find(c => c.id === ph);
+    showToast(`✓ <b>${co}</b> flyttad till <b>${col?.label || ph}</b>`);
+    render();
+  }
+}
+
+function kbCardClick(e, co) {
+  // Don't open modal if we just finished a drag
+  if (S.dragging) return;
+  showDealDetail(co);
 }
 
 // ═══════════════════════════════════════════════════════
