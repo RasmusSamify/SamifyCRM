@@ -1779,7 +1779,8 @@ async function saveExpense() {
 // ═══════════════════════════════════════════════════════
 //  KALENDER — live Google Calendar (info@samify.se)
 // ═══════════════════════════════════════════════════════
-const gcalEvents = [
+// GCal events — live från info@samify.se (uppdateras via ny konversation med Claude)
+let gcalEvents = [
   {date:'2026-03-31',time:'11:00',title:'Demo Samify x AWJ',link:'https://www.google.com/calendar/event?eid=NHU3MWxjcmNxaGpocW04bzI2aWxoazUyN3QgaW5mb0BzYW1pZnkuc2U'},
   {date:'2026-04-02',time:'13:00',title:'Futuremeets X Samify',link:'https://www.google.com/calendar/event?eid=N2NqZDlvYWIzbm1hbHExZXNrNmZvb29rYnBfMjAyNjA0MDNUMTEwMDAwWiBpbmZvQHNhbWlmeS5zZQ'},
   {date:'2026-04-08',time:'10:00',title:'Samify AI X Carls Elektriska AB',link:'https://www.google.com/calendar/event?eid=MmVza2Nzb3M5c3I2MzBxczUzNHI0dnJqOGcgaW5mb0BzYW1pZnkuc2U'},
@@ -1788,7 +1789,11 @@ const gcalEvents = [
   {date:'2026-04-17',time:'13:00',title:'Futuremeets X Samify',link:'https://www.google.com/calendar/event?eid=N2NqZDlvYWIzbm1hbHExZXNrNmZvb29rYnBfMjAyNjA0MTdUMTEwMDAwWiBpbmZvQHNhbWlmeS5zZQ'},
   {date:'2026-04-20',time:'14:00',title:'Samify AI X Elektriska Montagebyrån',link:'https://www.google.com/calendar/event?eid=N2hvM2pqcWRxaTFtbGg5aTExb3RpdDFqZDcgaW5mb0BzYW1pZnkuc2U'},
   {date:'2026-04-24',time:'13:00',title:'Futuremeets X Samify',link:'https://www.google.com/calendar/event?eid=N2NqZDlvYWIzbm1hbHExZXNrNmZvb29rYnBfMjAyNjA0MjRUMTEwMDAwWiBpbmZvQHNhbWlmeS5zZQ'},
+  {date:'2026-05-01',time:'13:00',title:'Futuremeets X Samify',link:'https://www.google.com/calendar/event?eid=N2NqZDlvYWIzbm1hbHExZXNrNmZvb29rYnBfMjAyNjA1MDFUMTEwMDAwWiBpbmZvQHNhbWlmeS5zZQ'},
+  {date:'2026-05-08',time:'13:00',title:'Futuremeets X Samify',link:'https://www.google.com/calendar/event?eid=N2NqZDlvYWIzbm1hbHExZXNrNmZvb29rYnBfMjAyNjA1MDhUMTEwMDAwWiBpbmZvQHNhbWlmeS5zZQ'},
+  {date:'2026-05-15',time:'13:00',title:'Futuremeets X Samify',link:'https://www.google.com/calendar/event?eid=N2NqZDlvYWIzbm1hbHExZXNrNmZvb29rYnBfMjAyNjA1MTVUMTEwMDAwWiBpbmZvQHNhbWlmeS5zZQ'},
 ];
+
 
 function renderKal() {
   const months = ['Januari','Februari','Mars','April','Maj','Juni','Juli','Augusti','September','Oktober','November','December'];
