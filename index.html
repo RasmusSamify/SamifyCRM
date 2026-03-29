@@ -288,6 +288,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);disp
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         Avtal
       </div>
+      <div class="ni" data-m="kost">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Kostnader <span class="nbadge" id="nb-kost" style="background:var(--pur)">–</span>
+      </div>
     </div>
     <div class="nav-sec">
       <div class="nav-lbl">CRM</div>
@@ -396,7 +400,24 @@ const S = {
   dragging: false,
 };
 
-const titles = {dash:'Dashboard',fakt:'Fakturor',avtal:'Avtal & Kontrakt',kund:'Kunder',pipe:'Pipeline',kal:'Kalender'};
+const titles = {dash:'Dashboard',fakt:'Fakturor',avtal:'Avtal & Kontrakt',kund:'Kunder',pipe:'Pipeline',kal:'Kalender',kost:'Kostnader & Abonnemang'};
+
+// ═══════════════════════════════════════════════════════
+//  EXPENSES DATA (ZicLun AB / Samify egna kostnader)
+// ═══════════════════════════════════════════════════════
+let expenses = [
+  {id:1, name:'Claude AI (Anthropic)', cat:'AI & Modeller', am:1200, currency:'USD', amSEK:12800, cycle:'Månadsvis', nextDate:'2026-04-01', st:'active', note:'Pro plan — används för alla klientprojekt och Samify CRM', url:'console.anthropic.com'},
+  {id:2, name:'Zapier', cat:'Automation', am:69, currency:'USD', amSEK:735, cycle:'Månadsvis', nextDate:'2026-04-08', st:'active', note:'Professional plan — TB-Bot, Emmaboda leads, webhooks', url:'zapier.com'},
+  {id:3, name:'Lovable', cat:'AI-verktyg', am:50, currency:'USD', amSEK:532, cycle:'Månadsvis', nextDate:'2026-04-12', st:'active', note:'Prototyper och UI-generering', url:'lovable.dev'},
+  {id:4, name:'Netlify', cat:'Hosting & Deploy', am:19, currency:'USD', amSEK:202, cycle:'Månadsvis', nextDate:'2026-04-01', st:'active', note:'Pro plan — alla klient-deploys och Samify-widget', url:'netlify.com'},
+  {id:5, name:'Supabase', cat:'Backend & Databas', am:25, currency:'USD', amSEK:266, cycle:'Månadsvis', nextDate:'2026-04-03', st:'active', note:'Pro plan — databas för El-kretsen, AWJ, Nivell, Samify CRM', url:'supabase.com'},
+  {id:6, name:'GitHub', cat:'Hosting & Deploy', am:4, currency:'USD', amSEK:43, cycle:'Månadsvis', nextDate:'2026-04-15', st:'active', note:'Team plan — versionshantering alla projekt', url:'github.com'},
+  {id:7, name:'Fortnox', cat:'Ekonomi', am:599, currency:'SEK', amSEK:599, cycle:'Månadsvis', nextDate:'2026-04-05', st:'active', note:'Fakturering och bokföring ZicLun AB', url:'fortnox.se'},
+  {id:8, name:'Microsoft 365', cat:'Produktivitet', am:1199, currency:'SEK', amSEK:1199, cycle:'Månadsvis', nextDate:'2026-04-20', st:'active', note:'E-post, Teams, Office för Adnan & Rasmus', url:'microsoft.com'},
+  {id:9, name:'SimplyBook.me', cat:'Bokningssystem', am:25, currency:'USD', amSEK:266, cycle:'Månadsvis', nextDate:'2026-04-15', st:'active', note:'Hönshyltegård bokningsintegration', url:'simplybook.me'},
+];
+
+let aiExpenseSuggestions = [];
 
 // ═══════════════════════════════════════════════════════
 //  UTILS
@@ -446,6 +467,7 @@ function render() {
   else if (m==='kund') ct.innerHTML = renderKund();
   else if (m==='pipe') ct.innerHTML = renderPipe();
   else if (m==='kal') ct.innerHTML = renderKal();
+  else if (m==='kost') ct.innerHTML = renderKost();
   afterRender(m);
   updateBadges();
 }
@@ -461,6 +483,11 @@ function afterRender(m) {
 function updateBadges() {
   const nb = document.getElementById('nb-fakt');
   if (nb) nb.textContent = invoices.filter(i=>i.st!=='paid').length;
+  const nbk = document.getElementById('nb-kost');
+  if (nbk) {
+    const totalKost = expenses.filter(e=>e.st==='active').reduce((a,e)=>a+e.amSEK,0);
+    nbk.textContent = fmtSEK(totalKost);
+  }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1026,6 +1053,224 @@ function kbCardClick(e, co) {
 }
 
 // ═══════════════════════════════════════════════════════
+//  KOSTNADER
+// ═══════════════════════════════════════════════════════
+function renderKost() {
+  const active = expenses.filter(e=>e.st==='active');
+  const totalSEK = active.reduce((a,e)=>a+e.amSEK,0);
+  const mrr = totalMRR();
+  const margin = mrr - totalSEK;
+  const marginPct = Math.round((margin/mrr)*100);
+
+  // Group by category
+  const cats = {};
+  active.forEach(e => {
+    if (!cats[e.cat]) cats[e.cat] = [];
+    cats[e.cat].push(e);
+  });
+
+  // Sort upcoming by date
+  const upcoming = [...active].sort((a,b)=>new Date(a.nextDate)-new Date(b.nextDate)).slice(0,5);
+  const tlHTML = upcoming.map(e=>{
+    const d = new Date(e.nextDate);
+    const daysLeft = Math.round((d-new Date())/(1000*60*60*24));
+    const urgent = daysLeft <= 7;
+    return `<div class="tl-item" style="${urgent?'border-color:var(--warn)':''}">
+      <div class="tl-date"><div class="tl-day" style="${urgent?'color:var(--warn)':''}">${d.getDate()}</div><div class="tl-mon">${d.toLocaleDateString('sv-SE',{month:'short'})}</div></div>
+      <div class="tl-info">
+        <div class="tl-cl">${e.name}</div>
+        <div class="tl-ds">${e.cat} · ${e.cycle}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="tl-am" style="color:var(--err)">-${e.currency==='SEK'?fmt(e.amSEK):'$'+e.am}</div>
+        ${urgent?`<div style="font-size:9.5px;color:var(--warn);margin-top:3px">om ${daysLeft}d</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Category breakdown bars
+  const catTotals = Object.entries(cats).map(([k,v])=>({cat:k,tot:v.reduce((a,e)=>a+e.amSEK,0)})).sort((a,b)=>b.tot-a.tot);
+  const maxCat = catTotals[0]?.tot||1;
+  const catBars = catTotals.map(ct=>`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <div style="font-size:12px;min-width:140px;color:var(--dim)">${ct.cat}</div>
+      <div style="flex:1;height:6px;background:var(--border2);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${Math.round(ct.tot/maxCat*100)}%;background:linear-gradient(to right,var(--err),rgba(248,113,113,.4));border-radius:3px"></div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--err);min-width:80px;text-align:right">${fmtSEK(ct.tot)} kr</div>
+    </div>`).join('');
+
+  // Expense rows per category
+  const catSections = Object.entries(cats).map(([cat, exps])=>{
+    const catTotal = exps.reduce((a,e)=>a+e.amSEK,0);
+    const rows = exps.map(e=>{
+      const d = new Date(e.nextDate);
+      const daysLeft = Math.round((d-new Date())/(1000*60*60*24));
+      const urgent = daysLeft <= 7;
+      return `<tr>
+        <td>
+          <div style="font-weight:700;font-size:13px">${e.name}</div>
+          <div style="font-size:11px;color:var(--faint);margin-top:2px">${e.note}</div>
+        </td>
+        <td><span class="bdg bdg-neu">${e.cat}</span></td>
+        <td style="font-family:'JetBrains Mono',monospace">
+          ${e.currency!=='SEK'?`<span style="color:var(--dim);font-size:10.5px">$${e.am} USD</span><br>`:''}
+          <span style="color:var(--err)">${fmtSEK(e.amSEK)} kr</span>
+        </td>
+        <td><span class="bdg bdg-info">${e.cycle}</span></td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:${urgent?'var(--warn)':'inherit'}">${e.nextDate}${urgent?` <span style="font-size:9px;color:var(--warn)">(!)</span>`:''}</td>
+        <td style="display:flex;gap:4px">
+          <button class="btn btn-pur btn-sm" onclick="uploadExpenseInvoice(${e.id})" title="Ladda upp faktura för AI-analys">📄 AI</button>
+          <button class="btn btn-g btn-sm" onclick="deleteExpense(${e.id})">✕</button>
+        </td>
+      </tr>`;
+    }).join('');
+    return rows;
+  }).join('');
+
+  return `
+    <!-- STATS -->
+    <div class="sgrid" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
+      <div class="scard c-err" style="--c-err-after:var(--err)">
+        <style>.c-err::after{background:var(--err)!important}</style>
+        <div class="slabel">Total kostnad/mån</div>
+        <div class="sval" style="color:var(--err)">${fmtSEK(totalSEK)}</div>
+        <div class="sdelta">${active.length} abonnemang aktiva</div>
+      </div>
+      <div class="scard c-ok"><div class="slabel">Nettomarginal/mån</div><div class="sval" style="color:var(--ok)">${fmtSEK(margin)}</div><div class="sdelta ${marginPct>60?'up':marginPct>30?'':'dn'}">${marginPct}% marginal</div></div>
+      <div class="scard c-acc"><div class="slabel">MRR (intäkter)</div><div class="sval">${fmtSEK(mrr)}</div><div class="sdelta up">↑ mot förra månaden</div></div>
+      <div class="scard c-pur"><div class="slabel">Kostnad/intäkt-ratio</div><div class="sval">${Math.round(totalSEK/mrr*100)}%</div><div class="sdelta">${Math.round(totalSEK/mrr*100)<30?'✓ Hälsosamt':'Håll koll!'}</div></div>
+    </div>
+
+    <!-- DROP ZONE -->
+    <div class="dz" id="dz-kost" onclick="uploadExpenseInvoice(null)">
+      <input type="file" id="fi-kost" accept=".pdf,.png,.jpg,.jpeg" style="display:none" onchange="handleExpenseFile(event)">
+      <div class="dz-ico">🧾</div>
+      <div class="dz-t"><b>Ladda upp en faktura (Zapier, Claude, Lovable...)</b><br>AI läser av belopp, datum och nästa faktureringsdatum automatiskt<br><small style="color:var(--faint);font-size:11px">Stöder PDF och bilder</small></div>
+    </div>
+    <div id="ai-expense-result"></div>
+
+    <div class="g2" style="margin-bottom:14px">
+      <!-- UPCOMING PAYMENTS -->
+      <div class="card">
+        <div class="card-hd"><span class="card-ht">Kommande kostnader</span><span class="bdg bdg-err">${fmtSEK(upcoming.reduce((a,e)=>a+e.amSEK,0))} kr</span></div>
+        <div class="card-body" style="padding:12px"><div class="tl">${tlHTML}</div></div>
+      </div>
+      <!-- CATEGORY BREAKDOWN -->
+      <div class="card">
+        <div class="card-hd"><span class="card-ht">Kostnad per kategori</span></div>
+        <div class="card-body">${catBars}</div>
+      </div>
+    </div>
+
+    <!-- FULL LIST -->
+    <div class="card">
+      <div class="card-hd">
+        <span class="card-ht">Alla abonnemang & kostnader (${active.length})</span>
+        <button class="btn btn-p btn-sm" onclick="showAddExpenseModal()">+ Lägg till</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead><tr><th>Tjänst</th><th>Kategori</th><th>Kostnad/mån</th><th>Cykel</th><th>Nästa fakturering</th><th>Åtgärd</th></tr></thead>
+          <tbody>${catSections}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function uploadExpenseInvoice(id) {
+  document.getElementById('fi-kost').click();
+}
+
+function handleExpenseFile(e) {
+  if (!e.target.files || !e.target.files.length) return;
+  simulateExpenseAI(e.target.files[0].name);
+}
+
+function simulateExpenseAI(fname) {
+  const r = document.getElementById('ai-expense-result');
+  if (!r) return;
+  r.innerHTML = `<div class="cc" style="border-color:var(--pur);margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span class="card-ht" style="color:var(--pur)">🤖 AI läser ${fname}...</span>
+      <span class="ai-pill"><span class="ai-dot"></span>Claude Vision</span>
+    </div>
+    <div style="color:var(--dim);font-size:13px;margin-top:8px">Extraherar tjänst, belopp, valuta och nästa faktureringsdatum...</div>
+  </div>`;
+
+  const demos = [
+    {name:'Zapier', cat:'Automation', am:69, currency:'USD', amSEK:735, cycle:'Månadsvis', nextDate:'2026-05-08', note:'Professional plan — auto-detected'},
+    {name:'OpenAI', cat:'AI & Modeller', am:20, currency:'USD', amSEK:213, cycle:'Månadsvis', nextDate:'2026-04-22', note:'ChatGPT Team — auto-detected'},
+    {name:'Make (Integromat)', cat:'Automation', am:9, currency:'USD', amSEK:96, cycle:'Månadsvis', nextDate:'2026-04-18', note:'Core plan — auto-detected'},
+  ];
+  const ex = demos[Math.floor(Math.random()*demos.length)];
+
+  setTimeout(() => {
+    r.innerHTML = `<div class="cc" style="border-color:var(--ok);margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;align-items:center">
+        <span class="card-ht" style="color:var(--ok)">✓ AI extraherade kostnad från faktura</span>
+        <button class="btn btn-p btn-sm" onclick="addExtractedExpense(${JSON.stringify(ex).replace(/"/g,"'")})">+ Lägg till</button>
+      </div>
+      <div class="cc-meta">
+        <div class="cc-mk"><div class="cc-ml">Tjänst</div><div class="cc-mv">${ex.name}</div></div>
+        <div class="cc-mk"><div class="cc-ml">Kategori</div><div class="cc-mv">${ex.cat}</div></div>
+        <div class="cc-mk"><div class="cc-ml">Belopp</div><div class="cc-mv" style="color:var(--err)">$${ex.am} USD (~${fmtSEK(ex.amSEK)} kr)</div></div>
+        <div class="cc-mk"><div class="cc-ml">Cykel</div><div class="cc-mv">${ex.cycle}</div></div>
+        <div class="cc-mk"><div class="cc-ml">Nästa fakturering</div><div class="cc-mv">${ex.nextDate}</div></div>
+      </div>
+    </div>`;
+  }, 2200);
+}
+
+function addExtractedExpense(ex) {
+  expenses.push({id:Date.now(), name:ex.name, cat:ex.cat, am:ex.am, currency:ex.currency, amSEK:ex.amSEK, cycle:ex.cycle, nextDate:ex.nextDate, st:'active', note:ex.note, url:''});
+  document.getElementById('ai-expense-result').innerHTML = '';
+  render();
+}
+
+function deleteExpense(id) {
+  expenses = expenses.filter(e=>e.id!==id);
+  render();
+}
+
+function showAddExpenseModal() {
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-title">Lägg till abonnemang</div>
+    <div class="form-group"><label class="form-label">Tjänst / namn</label><input class="form-input" id="me-name" placeholder="t.ex. Zapier"></div>
+    <div class="form-group"><label class="form-label">Kategori</label>
+      <select class="form-input" id="me-cat">
+        <option>AI & Modeller</option><option>Automation</option><option>Hosting & Deploy</option>
+        <option>Backend & Databas</option><option>Ekonomi</option><option>Produktivitet</option>
+        <option>Marknadsföring</option><option>Bokningssystem</option><option>Övrigt</option>
+      </select></div>
+    <div style="display:flex;gap:8px">
+      <div class="form-group" style="flex:1"><label class="form-label">Belopp</label><input class="form-input" id="me-am" type="number" placeholder="69"></div>
+      <div class="form-group" style="flex:1"><label class="form-label">Valuta</label>
+        <select class="form-input" id="me-cur"><option value="SEK">SEK</option><option value="USD">USD ($)</option><option value="EUR">EUR (€)</option></select></div>
+    </div>
+    <div class="form-group"><label class="form-label">Nästa faktureringsdatum</label><input class="form-input" id="me-dt" type="date"></div>
+    <div class="form-group"><label class="form-label">Anteckning</label><input class="form-input" id="me-note" placeholder="Vad används det till?"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-p" onclick="saveExpense()">Spara</button>
+      <button class="btn btn-g" onclick="closeModal()">Avbryt</button>
+    </div>`;
+  document.getElementById('modal').classList.add('show');
+}
+
+function saveExpense() {
+  const name = document.getElementById('me-name').value;
+  const cat = document.getElementById('me-cat').value;
+  const am = parseFloat(document.getElementById('me-am').value)||0;
+  const cur = document.getElementById('me-cur').value;
+  const dt = document.getElementById('me-dt').value;
+  const note = document.getElementById('me-note').value;
+  if (!name||!am||!dt) return;
+  const rate = cur==='USD'?10.65:cur==='EUR'?11.2:1;
+  expenses.push({id:Date.now(), name, cat, am, currency:cur, amSEK:Math.round(am*rate), cycle:'Månadsvis', nextDate:dt, st:'active', note, url:''});
+  closeModal(); render();
+}
+
+// ═══════════════════════════════════════════════════════
 //  KALENDER
 // ═══════════════════════════════════════════════════════
 function renderKal() {
@@ -1198,6 +1443,18 @@ function setupDragDrop() {
   });
 }
 
+function setupKostDrop() {
+  const dz = document.getElementById('dz-kost');
+  if (!dz) return;
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('over');
+    const files = e.dataTransfer.files;
+    if (files.length > 0) simulateExpenseAI(files[0].name);
+  });
+}
+
 // ═══════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════
@@ -1210,6 +1467,7 @@ const origRender = render;
 window.render = function() {
   origRender();
   setupDragDrop();
+  setupKostDrop();
 };
 
 render();
