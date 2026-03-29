@@ -332,50 +332,114 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);disp
 
 <script>
 // ═══════════════════════════════════════════════════════
-//  DATA
+//  SUPABASE CONFIG
 // ═══════════════════════════════════════════════════════
-const clients = [
-  {n:'Nivell System AB', mrr:12499, ph:70, ct:'Gustaf', svc:'Nivell AI Desk + Integrationer', cs:'2025-01-15', cv:174986, desc:'AI-drivet offertsystem med CAD-analys via Claude Vision. Setup-avgift 24 995 kr, år-1 månadsavgift 12 499 kr. År 2+ höjs till 24 995 kr/mån.', owner:'Adnan'},
-  {n:'El-kretsen', mrr:3999, ph:100, ct:'Anna', svc:'Intranät + ELvis AI (FAQ-bot)', cs:'2024-11-01', cv:47988, desc:'Intranät deployat på Netlify med Claude-proxy. ELvis svarar på FAQ och loggar frågor i Supabase. Kretskampen quiz-app byggd separat.', owner:'Rasmus'},
-  {n:'Ecokraft', mrr:4999, ph:85, ct:'Marcus', svc:'Emaldo AI + Driving Dialer', cs:'2024-12-01', cv:59988, desc:'Emaldo AI hanterar kundförfrågningar om solpaneler, AC/DC-koppling, Grid Rewards. Driving Dialer-app integrerad med Asana för säljteamet.', owner:'Adnan'},
-  {n:'AWJ Elteknik AB', mrr:2499, ph:100, ct:'Anders', svc:'Intranät + Toolbox Widget', cs:'2025-02-01', cv:29988, desc:'Fullt intranät + JS popup-widget med 8 skärmar: ROT-kalkyl, checklistor, kontakter, statistik. Supabase-backend, postMessage-kommunikation.', owner:'Rasmus'},
-  {n:'Olsfors Elektriska', mrr:1499, ph:100, ct:'Per', svc:'Chatbot Widget (Wix)', cs:'2025-01-01', cv:17988, desc:'Samify-widget deployad via Netlify/GitHub som single script tag på Wix. Branded för Olsfors Elektriska.', owner:'Adnan'},
-  {n:'Emmaboda Energi', mrr:2999, ph:100, ct:'Lisa', svc:'Säljpresentation + Effektkollen', cs:'2024-10-01', cv:35988, desc:'9-slides HTML-säljpresentation med inbäddad effekttariff-kalkylator. GDPR-dokument (Datapolicy + DPA) framtagna.', owner:'Rasmus'},
-  {n:'TB-Group', mrr:1999, ph:75, ct:'Thomas', svc:'Headhunting Kit + TB-Bot v1.3', cs:'2025-03-01', cv:23988, desc:'React-baserad Headhunting Kit-generator. TB-Bot v1.3 med GDPR-consent-flöde för lead-capture via Zapier.', owner:'Adnan'},
-  {n:'Hönshyltegård', mrr:999, ph:90, ct:'Sara', svc:'Bokningssystem (SimplyBook)', cs:'2025-02-15', cv:11988, desc:'Publik bokningswidget + PIN-skyddad admin-dashboard för alpakafarm. SimplyBook API via Netlify Function, Open-Meteo väderintegration.', owner:'Rasmus'},
-];
+const SB_URL = 'https://axypazcbgcogtdqqimvi.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4eXBhemNiZ2NvZ3RkcXFpbXZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MTQzNTQsImV4cCI6MjA5MDM5MDM1NH0.UJmVxHtK1SUWjkiXBO6KlRsAAy4pFo9B32dtnhWGy7E';
 
-let invoices = [
-  {id:1, cl:'Nivell System AB', am:12499, due:'2026-04-01', st:'pending', cat:'Månadsavgift April'},
-  {id:2, cl:'El-kretsen', am:3999, due:'2026-04-05', st:'pending', cat:'Månadsavgift April'},
-  {id:3, cl:'Ecokraft', am:4999, due:'2026-04-01', st:'paid', cat:'Månadsavgift April'},
-  {id:4, cl:'AWJ Elteknik AB', am:2499, due:'2026-03-28', st:'paid', cat:'Månadsavgift Mars'},
-  {id:5, cl:'Olsfors Elektriska', am:1499, due:'2026-03-20', st:'overdue', cat:'Månadsavgift Mars'},
-  {id:6, cl:'Emmaboda Energi', am:2999, due:'2026-04-03', st:'pending', cat:'Månadsavgift April'},
-  {id:7, cl:'TB-Group', am:1999, due:'2026-04-01', st:'pending', cat:'Månadsavgift April'},
-  {id:8, cl:'Hönshyltegård', am:999, due:'2026-04-15', st:'pending', cat:'Månadsavgift April'},
-];
+async function sbGet(table, params='') {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, {
+    headers: {'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`}
+  });
+  return r.json();
+}
+async function sbPost(table, body) {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: {'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation'},
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+async function sbPatch(table, id, body) {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: {'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  });
+  return r.ok;
+}
+async function sbDelete(table, id) {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`, {
+    method: 'DELETE',
+    headers: {'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`}
+  });
+  return r.ok;
+}
 
-let contracts = [
-  {cl:'Nivell System AB', sv:12499, st:'2025-01-15', en:'2026-01-14', bind:12, notice:3, tot:174986, note:'År 2+: 24 995 kr/mån'},
-  {cl:'El-kretsen', sv:3999, st:'2024-11-01', en:'2025-10-31', bind:12, notice:3, tot:47988, note:'Löpande efter bindningstid'},
-  {cl:'Ecokraft', sv:4999, st:'2024-12-01', en:'2025-11-30', bind:12, notice:2, tot:59988, note:'Inkl. Driving Dialer-licens'},
-  {cl:'AWJ Elteknik AB', sv:2499, st:'2025-02-01', en:'2026-01-31', bind:12, notice:3, tot:29988, note:'Löpande support inkluderat'},
-  {cl:'Olsfors Elektriska', sv:1499, st:'2025-01-01', en:'2025-12-31', bind:12, notice:1, tot:17988, note:''},
-  {cl:'Emmaboda Energi', sv:2999, st:'2024-10-01', en:'2025-09-30', bind:12, notice:3, tot:35988, note:''},
-  {cl:'TB-Group', sv:1999, st:'2025-03-01', en:'2026-02-28', bind:12, notice:2, tot:23988, note:''},
-  {cl:'Hönshyltegård', sv:999, st:'2025-02-15', en:'2026-02-14', bind:12, notice:1, tot:11988, note:''},
-];
+// ═══════════════════════════════════════════════════════
+//  DATA (live från Supabase)
+// ═══════════════════════════════════════════════════════
+let clients   = [];
+let invoices  = [];
+let contracts = [];
+let pipeline  = [];
+let expenses  = [];
 
-let pipeline = [
-  {co:'Bergström & Partners', ct:'Erik Bergström', val:84000, ph:'prospekt', dt:'2026-03-20', note:'Advokatbyrå — dokumentautomation'},
-  {co:'Kalmar Teknik AB', ct:'Johanna Nilsson', val:36000, ph:'kontaktad', dt:'2026-03-22', note:'Möte bokat 5 april'},
-  {co:'Sydkust Bygg', ct:'Mats Lundgren', val:48000, ph:'demo', dt:'2026-03-18', note:'Demo chatbot + integration gick bra'},
-  {co:'Öland Fastigheter', ct:'Anna Pettersson', val:120000, ph:'offert', dt:'2026-03-15', note:'Offert skickad — väntar på svar'},
-  {co:'Glastech Syd', ct:'Marie Holm', val:60000, ph:'prospekt', dt:'2026-03-28', note:'LinkedIn-kontakt, intresserad av AI-agent'},
-  {co:'Sjölins Elektriska', ct:'Klas Sjölin', val:24000, ph:'uppföljning', dt:'2026-03-25', note:'Följ upp efter påsk'},
-  {co:'Linnéuniversitetet', ct:'Henrik Svensson', val:96000, ph:'förlorad', dt:'2026-02-28', note:'Valde Microsoft Copilot'},
-];
+// Map Supabase rows → app format
+function mapClients(rows) {
+  return rows.map(r => ({
+    id: r.id, n: r.name, mrr: r.mrr, ph: r.project_health,
+    ct: r.contact_name, svc: r.service, cs: r.contract_start,
+    cv: r.contract_value, desc: r.description, owner: r.owner
+  }));
+}
+function mapInvoices(rows) {
+  return rows.map(r => ({
+    id: r.id, cl: r.client_name, am: r.amount,
+    due: r.due_date, st: r.status, cat: r.category
+  }));
+}
+function mapContracts(rows) {
+  return rows.map(r => ({
+    id: r.id, cl: r.client_name, sv: r.monthly_value, st: r.start_date,
+    en: r.end_date, bind: r.binding_months, notice: r.notice_months,
+    tot: r.total_value, note: r.note
+  }));
+}
+function mapPipeline(rows) {
+  return rows.map(r => ({
+    id: r.id, co: r.company, ct: r.contact_name,
+    val: r.value, ph: r.phase, dt: r.deal_date, note: r.note
+  }));
+}
+function mapExpenses(rows) {
+  return rows.map(r => ({
+    id: r.id, name: r.name, cat: r.category, amSEK: r.amount_sek,
+    cycle: r.billing_cycle, nextDate: r.next_date, st: r.status, note: r.note
+  }));
+}
+
+async function loadData() {
+  showLoading();
+  try {
+    const [cl, inv, con, pip, exp] = await Promise.all([
+      sbGet('clients', 'order=mrr.desc'),
+      sbGet('invoices', 'order=due_date.asc'),
+      sbGet('contracts', 'order=end_date.asc'),
+      sbGet('pipeline', 'order=created_at.desc'),
+      sbGet('expenses', 'status=eq.active&order=next_date.asc'),
+    ]);
+    clients   = mapClients(cl);
+    invoices  = mapInvoices(inv);
+    contracts = mapContracts(con);
+    pipeline  = mapPipeline(pip);
+    expenses  = mapExpenses(exp);
+  } catch(e) {
+    console.error('Supabase load error:', e);
+    showToast('⚠️ Kunde inte ladda data från Supabase');
+  }
+  render();
+}
+
+function showLoading() {
+  document.getElementById('ct').innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;gap:14px">
+      <div style="width:36px;height:36px;border:3px solid var(--border2);border-top-color:var(--acc);border-radius:50%;animation:spin .7s linear infinite"></div>
+      <div style="color:var(--dim);font-size:13px">Laddar från Supabase...</div>
+    </div>
+    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
+}
 
 const kbCols = [
   {id:'prospekt', label:'Prospekt', color:'var(--dim)'},
@@ -401,21 +465,6 @@ const S = {
 };
 
 const titles = {dash:'Dashboard',fakt:'Fakturor',avtal:'Avtal & Kontrakt',kund:'Kunder',pipe:'Pipeline',kal:'Kalender',kost:'Kostnader & Abonnemang'};
-
-// ═══════════════════════════════════════════════════════
-//  EXPENSES DATA (ZicLun AB / Samify egna kostnader)
-// ═══════════════════════════════════════════════════════
-let expenses = [
-  {id:1, name:'Claude AI (Anthropic)', cat:'AI & Modeller', am:1200, currency:'USD', amSEK:12800, cycle:'Månadsvis', nextDate:'2026-04-01', st:'active', note:'Pro plan — används för alla klientprojekt och Samify CRM', url:'console.anthropic.com'},
-  {id:2, name:'Zapier', cat:'Automation', am:69, currency:'USD', amSEK:735, cycle:'Månadsvis', nextDate:'2026-04-08', st:'active', note:'Professional plan — TB-Bot, Emmaboda leads, webhooks', url:'zapier.com'},
-  {id:3, name:'Lovable', cat:'AI-verktyg', am:50, currency:'USD', amSEK:532, cycle:'Månadsvis', nextDate:'2026-04-12', st:'active', note:'Prototyper och UI-generering', url:'lovable.dev'},
-  {id:4, name:'Netlify', cat:'Hosting & Deploy', am:19, currency:'USD', amSEK:202, cycle:'Månadsvis', nextDate:'2026-04-01', st:'active', note:'Pro plan — alla klient-deploys och Samify-widget', url:'netlify.com'},
-  {id:5, name:'Supabase', cat:'Backend & Databas', am:25, currency:'USD', amSEK:266, cycle:'Månadsvis', nextDate:'2026-04-03', st:'active', note:'Pro plan — databas för El-kretsen, AWJ, Nivell, Samify CRM', url:'supabase.com'},
-  {id:6, name:'GitHub', cat:'Hosting & Deploy', am:4, currency:'USD', amSEK:43, cycle:'Månadsvis', nextDate:'2026-04-15', st:'active', note:'Team plan — versionshantering alla projekt', url:'github.com'},
-  {id:7, name:'Fortnox', cat:'Ekonomi', am:599, currency:'SEK', amSEK:599, cycle:'Månadsvis', nextDate:'2026-04-05', st:'active', note:'Fakturering och bokföring ZicLun AB', url:'fortnox.se'},
-  {id:8, name:'Microsoft 365', cat:'Produktivitet', am:1199, currency:'SEK', amSEK:1199, cycle:'Månadsvis', nextDate:'2026-04-20', st:'active', note:'E-post, Teams, Office för Adnan & Rasmus', url:'microsoft.com'},
-  {id:9, name:'SimplyBook.me', cat:'Bokningssystem', am:25, currency:'USD', amSEK:266, cycle:'Månadsvis', nextDate:'2026-04-15', st:'active', note:'Hönshyltegård bokningsintegration', url:'simplybook.me'},
-];
 
 let aiExpenseSuggestions = [];
 
@@ -643,9 +692,12 @@ function addExtractedInvoice(ex) {
   render();
 }
 
-function markPaid(id) {
+async function markPaid(id) {
   const inv = invoices.find(i=>i.id===id);
-  if (inv) { inv.st='paid'; render(); }
+  if (!inv) return;
+  inv.st = 'paid';
+  render();
+  await sbPatch('invoices', id, {status: 'paid'});
 }
 
 function sendReminder(cl) {
@@ -667,14 +719,17 @@ function showNewInvoiceModal() {
   document.getElementById('modal').classList.add('show');
 }
 
-function saveNewInvoice() {
+async function saveNewInvoice() {
   const cl = document.getElementById('m-cl').value;
   const am = parseFloat(document.getElementById('m-am').value)||0;
   const due = document.getElementById('m-due').value;
   const cat = document.getElementById('m-cat').value;
   if (!cl||!am||!due) return;
-  invoices.push({id:Date.now(), cl, am, due, st:'pending', cat});
-  closeModal(); render();
+  closeModal();
+  const rows = await sbPost('invoices', {client_name:cl, amount:am, due_date:due, status:'pending', category:cat});
+  if (rows && rows[0]) invoices.push(mapInvoices([rows[0]])[0]);
+  else invoices.push({id:Date.now(), cl, am, due, st:'pending', cat});
+  render();
 }
 
 // ═══════════════════════════════════════════════════════
@@ -961,16 +1016,19 @@ function showNewDealModal() {
   document.getElementById('modal').classList.add('show');
 }
 
-function saveNewDeal() {
+async function saveNewDeal() {
   const co=document.getElementById('m-co').value;
   const ct=document.getElementById('m-ct').value;
   const val=parseFloat(document.getElementById('m-val').value)||0;
   const ph=document.getElementById('m-ph').value;
   const note=document.getElementById('m-note').value;
   if(!co||!val) return;
+  closeModal();
   const today = new Date().toISOString().split('T')[0];
-  pipeline.push({co,ct,val,ph,dt:today,note});
-  closeModal(); render();
+  const rows = await sbPost('pipeline', {company:co, contact_name:ct, value:val, phase:ph, deal_date:today, note});
+  if (rows && rows[0]) pipeline.push(mapPipeline([rows[0]])[0]);
+  else pipeline.push({id:Date.now(), co, ct, val, ph, dt:today, note});
+  render();
 }
 
 function showDealDetail(co) {
@@ -993,11 +1051,14 @@ function showDealDetail(co) {
   document.getElementById('modal').classList.add('show');
 }
 
-function moveDeal(co) {
+async function moveDeal(co) {
   const deal = pipeline.find(p=>p.co===co);
   const newPh = document.getElementById('mv-ph').value;
-  if (deal) deal.ph = newPh;
-  closeModal(); render();
+  if (deal) {
+    deal.ph = newPh;
+    closeModal(); render();
+    await sbPatch('pipeline', deal.id, {phase: newPh});
+  }
 }
 
 // ─── KANBAN DRAG & DROP ───────────────────────────────
@@ -1032,7 +1093,7 @@ function kbDragLeave(e) {
   }
 }
 
-function kbDrop(e, ph) {
+async function kbDrop(e, ph) {
   e.preventDefault();
   document.querySelectorAll('.kb-cards').forEach(el => el.classList.remove('drag-over'));
   const co = S.dragCo || e.dataTransfer.getData('text/plain');
@@ -1043,6 +1104,7 @@ function kbDrop(e, ph) {
     const col = kbCols.find(c => c.id === ph);
     showToast(`✓ <b>${co}</b> flyttad till <b>${col?.label || ph}</b>`);
     render();
+    await sbPatch('pipeline', deal.id, {phase: ph});
   }
 }
 
@@ -1082,7 +1144,7 @@ function renderKost() {
         <div class="tl-ds">${e.cat} · ${e.cycle}</div>
       </div>
       <div style="text-align:right">
-        <div class="tl-am" style="color:var(--err)">-${e.currency==='SEK'?fmt(e.amSEK):'$'+e.am}</div>
+        <div class="tl-am" style="color:var(--err)">-${fmt(e.amSEK)}</div>
         ${urgent?`<div style="font-size:9.5px;color:var(--warn);margin-top:3px">om ${daysLeft}d</div>`:''}
       </div>
     </div>`;
@@ -1113,10 +1175,7 @@ function renderKost() {
           <div style="font-size:11px;color:var(--faint);margin-top:2px">${e.note}</div>
         </td>
         <td><span class="bdg bdg-neu">${e.cat}</span></td>
-        <td style="font-family:'JetBrains Mono',monospace">
-          ${e.currency!=='SEK'?`<span style="color:var(--dim);font-size:10.5px">$${e.am} USD</span><br>`:''}
-          <span style="color:var(--err)">${fmtSEK(e.amSEK)} kr</span>
-        </td>
+        <td style="font-family:'JetBrains Mono',monospace;color:var(--err)">${fmtSEK(e.amSEK)} kr</td>
         <td><span class="bdg bdg-info">${e.cycle}</span></td>
         <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:${urgent?'var(--warn)':'inherit'}">${e.nextDate}${urgent?` <span style="font-size:9px;color:var(--warn)">(!)</span>`:''}</td>
         <td style="display:flex;gap:4px">
@@ -1214,7 +1273,7 @@ function simulateExpenseAI(fname) {
       <div class="cc-meta">
         <div class="cc-mk"><div class="cc-ml">Tjänst</div><div class="cc-mv">${ex.name}</div></div>
         <div class="cc-mk"><div class="cc-ml">Kategori</div><div class="cc-mv">${ex.cat}</div></div>
-        <div class="cc-mk"><div class="cc-ml">Belopp</div><div class="cc-mv" style="color:var(--err)">$${ex.am} USD (~${fmtSEK(ex.amSEK)} kr)</div></div>
+        <div class="cc-mk"><div class="cc-ml">Belopp</div><div class="cc-mv" style="color:var(--err)">${fmtSEK(ex.amSEK)} kr/mån</div></div>
         <div class="cc-mk"><div class="cc-ml">Cykel</div><div class="cc-mv">${ex.cycle}</div></div>
         <div class="cc-mk"><div class="cc-ml">Nästa fakturering</div><div class="cc-mv">${ex.nextDate}</div></div>
       </div>
@@ -1228,9 +1287,10 @@ function addExtractedExpense(ex) {
   render();
 }
 
-function deleteExpense(id) {
+async function deleteExpense(id) {
   expenses = expenses.filter(e=>e.id!==id);
   render();
+  await sbDelete('expenses', id);
 }
 
 function showAddExpenseModal() {
@@ -1257,7 +1317,7 @@ function showAddExpenseModal() {
   document.getElementById('modal').classList.add('show');
 }
 
-function saveExpense() {
+async function saveExpense() {
   const name = document.getElementById('me-name').value;
   const cat = document.getElementById('me-cat').value;
   const am = parseFloat(document.getElementById('me-am').value)||0;
@@ -1266,8 +1326,12 @@ function saveExpense() {
   const note = document.getElementById('me-note').value;
   if (!name||!am||!dt) return;
   const rate = cur==='USD'?10.65:cur==='EUR'?11.2:1;
-  expenses.push({id:Date.now(), name, cat, am, currency:cur, amSEK:Math.round(am*rate), cycle:'Månadsvis', nextDate:dt, st:'active', note, url:''});
-  closeModal(); render();
+  const amSEK = Math.round(am*rate);
+  closeModal();
+  const rows = await sbPost('expenses', {name, category:cat, amount_original:am, currency:cur, amount_sek:amSEK, billing_cycle:'Månadsvis', next_date:dt, status:'active', note});
+  if (rows && rows[0]) expenses.push(mapExpenses([rows[0]])[0]);
+  else expenses.push({id:Date.now(), name, cat, amSEK, cycle:'Månadsvis', nextDate:dt, st:'active', note});
+  render();
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1470,7 +1534,8 @@ window.render = function() {
   setupKostDrop();
 };
 
-render();
+// Boot — load live data from Supabase
+loadData();
 </script>
 </body>
 </html>
