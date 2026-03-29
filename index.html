@@ -381,13 +381,15 @@ function mapClients(rows) {
   return rows.map(r => ({
     id: r.id, n: r.name, mrr: r.mrr, ph: r.project_health,
     ct: r.contact_name, svc: r.service, cs: r.contract_start,
-    cv: r.contract_value, desc: r.description, owner: r.owner
+    cv: r.contract_value, desc: r.description, owner: r.owner,
+    email: r.email || ''
   }));
 }
 function mapInvoices(rows) {
   return rows.map(r => ({
     id: r.id, cl: r.client_name, am: r.amount,
-    due: r.due_date, st: r.status, cat: r.category
+    due: r.due_date, st: r.status, cat: r.category,
+    reminderSent: r.reminder_sent_at || null
   }));
 }
 function mapContracts(rows) {
@@ -610,17 +612,22 @@ function renderDash() {
 // ═══════════════════════════════════════════════════════
 function renderFakt() {
   const sorted = [...invoices].sort((a,b) => new Date(a.due)-new Date(b.due));
-  const rows = sorted.map(i => `<tr>
-    <td><b>${i.cl}</b></td>
+  const rows = sorted.map(i => {
+    const reminderBadge = i.reminderSent
+      ? `<span class="bdg bdg-info" title="Skickad ${new Date(i.reminderSent).toLocaleDateString('sv-SE')}">📧 Påminnelse skickad</span>`
+      : '';
+    return `<tr>
+    <td><b>${i.cl}</b>${reminderBadge ? '<br>' + reminderBadge : ''}</td>
     <td style="font-family:'JetBrains Mono',monospace">${fmt(i.am)}</td>
     <td style="font-family:'JetBrains Mono',monospace;color:${i.st==='overdue'?'var(--err)':'inherit'}">${i.due}</td>
     <td style="color:var(--dim);font-size:12px">${i.cat}</td>
     <td>${statusBdg(i.st)}</td>
-    <td style="display:flex;gap:5px">
-      ${i.st!=='paid'?`<button class="btn btn-g btn-sm" onclick="markPaid(${i.id})">✓ Betald</button>`:''}
-      <button class="btn btn-pur btn-sm" onclick="sendReminder('${i.cl}')">📧</button>
+    <td style="display:flex;gap:5px;flex-wrap:wrap">
+      ${i.st!=='paid'?`<button class="btn btn-g btn-sm" onclick="markPaid('${i.id}')">✓ Betald</button>`:''}
+      ${i.st!=='paid'?`<button class="btn btn-pur btn-sm" onclick="sendReminder('${i.id}')" title="Generera och skicka påminnelse via Gmail">📧 Påminnelse</button>`:''}
     </td>
-  </tr>`).join('');
+  </tr>`;
+  }).join('');
 
   return `
     <div class="dz" id="dz" onclick="triggerFileInput()">
@@ -700,8 +707,60 @@ async function markPaid(id) {
   await sbPatch('invoices', id, {status: 'paid'});
 }
 
-function sendReminder(cl) {
-  showToast(`📧 Påminnelse skickad till ${cl}`);
+async function sendReminder(invoiceId) {
+  const inv = invoices.find(i => i.id === invoiceId);
+  if (!inv) return;
+  const client = clients.find(c => c.n === inv.cl);
+
+  // Show generating state
+  showToast(`🤖 AI genererar påminnelse till ${inv.cl}...`);
+
+  const daysOverdue = Math.round((new Date() - new Date(inv.due)) / (1000*60*60*24));
+  const overdueTxt = daysOverdue > 0 ? `Fakturan förföll för ${daysOverdue} dagar sedan.` : `Fakturan förfaller ${inv.due}.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: `Du är Rasmus på Samify (ZicLun AB). Skriv ett professionellt, vänligt men tydligt betalningspåminnelse-mail på svenska. 
+Avsändare: Rasmus Larsson, Samify / ZicLun AB, rasmus@samify.se
+Inga hälsningsfras som "Hoppas du har det bra" — gå rakt på sak. Avsluta med betalningsinformation: Bankgiro 1234-5678, märk betalningen med fakturanummer. Signera med Rasmus Larsson, Samify.
+Returnera BARA mejlets body-text, ingen subject-rad, inga extra kommentarer.`,
+        messages: [{
+          role: 'user',
+          content: `Skriv betalningspåminnelse till:
+Kontaktperson: ${client?.ct || inv.cl}
+Företag: ${inv.cl}
+Belopp: ${fmtSEK(inv.am)} kr
+Kategori: ${inv.cat || 'Månadsavgift'}
+Förfallodatum: ${inv.due}
+${overdueTxt}
+Status: ${inv.st === 'overdue' ? 'FÖRFALLEN' : 'Betalning ej registrerad'}`
+        }]
+      })
+    });
+    const data = await res.json();
+    const emailBody = data.content?.[0]?.text || '';
+    const subject = `Betalningspåminnelse — ${inv.cl} — ${fmtSEK(inv.am)} kr`;
+    const toEmail = client?.email || '';
+
+    // Open Gmail compose with pre-filled content
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(toEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
+    window.open(gmailUrl, '_blank');
+
+    // Log reminder in Supabase
+    const now = new Date().toISOString();
+    inv.reminderSent = now;
+    await sbPatch('invoices', invoiceId, {reminder_sent_at: now});
+    render();
+    showToast(`✓ Gmail öppnat med påminnelse till ${inv.cl}`);
+
+  } catch(e) {
+    showToast('⚠️ Kunde inte generera påminnelse — kontrollera anslutning');
+  }
 }
 
 function showNewInvoiceModal() {
