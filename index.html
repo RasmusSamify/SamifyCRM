@@ -461,7 +461,7 @@ const S = {
   kTab: 'Översikt',
   fTab: 'lista',
   chat: [],
-  calMon: 3, calYear: 2026,
+  calMon: 4, calYear: 2026,
   dragCo: null,   // company name being dragged
   dragging: false,
 };
@@ -1105,6 +1105,7 @@ function showDealDetail(co) {
     <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
       <select class="form-input" id="mv-ph" style="flex:1">${kbCols.map(c=>`<option value="${c.id}"${c.id===deal.ph?' selected':''}>${c.label}</option>`).join('')}</select>
       <button class="btn btn-p" onclick="moveDeal('${deal.co}')">Flytta fas</button>
+      <button class="btn btn-pur" onclick="bookMeetingFromDeal('${deal.co}')">📅 Boka möte</button>
       <button class="btn btn-g" onclick="closeModal()">Stäng</button>
     </div>`;
   document.getElementById('modal').classList.add('show');
@@ -1394,8 +1395,19 @@ async function saveExpense() {
 }
 
 // ═══════════════════════════════════════════════════════
-//  KALENDER
+//  KALENDER — live Google Calendar (info@samify.se)
 // ═══════════════════════════════════════════════════════
+const gcalEvents = [
+  {date:'2026-03-31',time:'11:00',title:'Demo Samify x AWJ',link:'https://www.google.com/calendar/event?eid=NHU3MWxjcmNxaGpocW04bzI2aWxoazUyN3QgaW5mb0BzYW1pZnkuc2U'},
+  {date:'2026-04-02',time:'13:00',title:'Futuremeets X Samify',link:'https://www.google.com/calendar/event?eid=N2NqZDlvYWIzbm1hbHExZXNrNmZvb29rYnBfMjAyNjA0MDNUMTEwMDAwWiBpbmZvQHNhbWlmeS5zZQ'},
+  {date:'2026-04-08',time:'10:00',title:'Samify AI X Carls Elektriska AB',link:'https://www.google.com/calendar/event?eid=MmVza2Nzb3M5c3I2MzBxczUzNHI0dnJqOGcgaW5mb0BzYW1pZnkuc2U'},
+  {date:'2026-04-09',time:'09:00',title:'Samify AI x LIWLIG Sweden AB',link:'https://www.google.com/calendar/event?eid=NDZ1NnA1a3FqZ2huazBiZWVwaTI2b3RzcHAgaW5mb0BzYW1pZnkuc2U'},
+  {date:'2026-04-10',time:'13:00',title:'Futuremeets X Samify',link:'https://www.google.com/calendar/event?eid=N2NqZDlvYWIzbm1hbHExZXNrNmZvb29rYnBfMjAyNjA0MTBUMTEwMDAwWiBpbmZvQHNhbWlmeS5zZQ'},
+  {date:'2026-04-17',time:'13:00',title:'Futuremeets X Samify',link:'https://www.google.com/calendar/event?eid=N2NqZDlvYWIzbm1hbHExZXNrNmZvb29rYnBfMjAyNjA0MTdUMTEwMDAwWiBpbmZvQHNhbWlmeS5zZQ'},
+  {date:'2026-04-20',time:'14:00',title:'Samify AI X Elektriska Montagebyrån',link:'https://www.google.com/calendar/event?eid=N2hvM2pqcWRxaTFtbGg5aTExb3RpdDFqZDcgaW5mb0BzYW1pZnkuc2U'},
+  {date:'2026-04-24',time:'13:00',title:'Futuremeets X Samify',link:'https://www.google.com/calendar/event?eid=N2NqZDlvYWIzbm1hbHExZXNrNmZvb29rYnBfMjAyNjA0MjRUMTEwMDAwWiBpbmZvQHNhbWlmeS5zZQ'},
+];
+
 function renderKal() {
   const months = ['Januari','Februari','Mars','April','Maj','Juni','Juli','Augusti','September','Oktober','November','December'];
   const days = ['Mån','Tis','Ons','Tor','Fre','Lör','Sön'];
@@ -1403,18 +1415,26 @@ function renderKal() {
   const first = new Date(y,m-1,1);
   const last = new Date(y,m,0);
   let dow = first.getDay(); dow = dow===0?6:dow-1;
+  const today = new Date();
 
-  // April 2026 events
-  const eventsMap = {
-    1:['pay:Faktura Nivell','pay:Faktura TB-Group'],
-    3:['meet:Möte El-kretsen'],
-    5:['pay:Faktura El-kretsen','pay:Faktura Ecokraft'],
-    8:['meet:Demo Kalmar Teknik'],
-    10:['pay:Faktura Olsfors'],
-    15:['pay:Faktura Hönshyltegård','meet:Q1-uppföljning kunder'],
-    22:['meet:Pipeline-review Adnan & Rasmus'],
-    28:['meet:Faktureringsdag maj','pay:Emmaboda Energi'],
-  };
+  // Build events map: GCal meetings + invoice due dates
+  const eventsMap = {};
+  gcalEvents.forEach(ev => {
+    const d = new Date(ev.date);
+    if (d.getFullYear()===y && d.getMonth()===m-1) {
+      const day = d.getDate();
+      if (!eventsMap[day]) eventsMap[day] = [];
+      eventsMap[day].push({type:'meet', label:`${ev.time} ${ev.title}`, link:ev.link});
+    }
+  });
+  invoices.filter(i=>i.st!=='paid').forEach(i=>{
+    const d = new Date(i.due);
+    if (d.getFullYear()===y && d.getMonth()===m-1) {
+      const day = d.getDate();
+      if (!eventsMap[day]) eventsMap[day] = [];
+      eventsMap[day].push({type:'pay', label:`Faktura ${i.cl.split(' ')[0]}`});
+    }
+  });
 
   const dHeaders = days.map(d=>`<div class="cal-dh">${d}</div>`).join('');
   const totalCells = Math.ceil((dow+last.getDate())/7)*7;
@@ -1422,30 +1442,53 @@ function renderKal() {
   for(let i=0;i<totalCells;i++){
     const dayNum=i-dow+1;
     const inMonth=dayNum>=1&&dayNum<=last.getDate();
-    const isToday=inMonth&&dayNum===29&&m===3&&y===2026;
+    const isToday=inMonth&&dayNum===today.getDate()&&m===today.getMonth()+1&&y===today.getFullYear();
     const evs=(inMonth&&eventsMap[dayNum])||[];
     const evHTML=evs.map(e=>{
-      const [type,label]=e.split(':');
-      return `<div class="cal-ev ${type==='pay'?'pay':''}">${label}</div>`;
+      const click=e.link?`onclick="window.open('${e.link}','_blank')" style="cursor:pointer"`:'';
+      return `<div class="cal-ev ${e.type==='pay'?'pay':''}" ${click}>${e.label}</div>`;
     }).join('');
     const displayNum=inMonth?dayNum:dayNum<=0?new Date(y,m-2,0).getDate()+dayNum:dayNum-last.getDate();
     cells+=`<div class="cal-d${inMonth?'':' om'}${isToday?' today':''}"><div class="cal-dn" style="${isToday?'color:var(--acc)':''}">${displayNum}</div>${evHTML}</div>`;
   }
 
+  const upcoming = gcalEvents.filter(ev=>new Date(ev.date)>=today).slice(0,6);
+  const upcomingHTML = upcoming.map(ev=>{
+    const d=new Date(ev.date);
+    return `<div class="tl-item" style="cursor:pointer" onclick="window.open('${ev.link}','_blank')">
+      <div class="tl-date"><div class="tl-day" style="color:var(--pur)">${d.getDate()}</div><div class="tl-mon">${d.toLocaleDateString('sv-SE',{month:'short'})}</div></div>
+      <div class="tl-info"><div class="tl-cl">${ev.title}</div><div class="tl-ds">${ev.time} · Klicka för att öppna</div></div>
+      <div style="font-size:10px;color:var(--pur)">↗</div>
+    </div>`;
+  }).join('');
+
   return `
-    <div class="cal-hd">
-      <div style="display:flex;align-items:center;gap:10px">
-        <button class="btn btn-g btn-sm" onclick="calNav(-1)">◀</button>
-        <span class="cal-month">${months[m-1]} ${y}</span>
-        <button class="btn btn-g btn-sm" onclick="calNav(1)">▶</button>
+    <div class="g2" style="margin-bottom:14px;align-items:start">
+      <div>
+        <div class="cal-hd">
+          <div style="display:flex;align-items:center;gap:10px">
+            <button class="btn btn-g btn-sm" onclick="calNav(-1)">◀</button>
+            <span class="cal-month">${months[m-1]} ${y}</span>
+            <button class="btn btn-g btn-sm" onclick="calNav(1)">▶</button>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <span style="font-size:10px;display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;background:var(--acc);border-radius:2px;display:inline-block"></span>Fakturor</span>
+            <span style="font-size:10px;display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;background:var(--pur);border-radius:2px;display:inline-block"></span>Möten</span>
+            <button class="btn btn-p btn-sm" onclick="bookNewMeeting()">+ Boka möte</button>
+          </div>
+        </div>
+        <div class="cal-grid">${dHeaders}${cells}</div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <span style="font-size:10.5px;display:flex;align-items:center;gap:4px"><span style="width:9px;height:9px;background:var(--acc);border-radius:2px;display:inline-block"></span>Betalningar</span>
-        <span style="font-size:10.5px;display:flex;align-items:center;gap:4px"><span style="width:9px;height:9px;background:var(--pur);border-radius:2px;display:inline-block"></span>Möten</span>
-        <button class="btn btn-pur btn-sm" onclick="connectGcal()">🔗 Google Kalender</button>
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ht">Kommande möten</span>
+          <span class="ai-pill" style="font-size:10px"><span class="ai-dot"></span>GCal live</span>
+        </div>
+        <div class="card-body" style="padding:10px">
+          <div class="tl">${upcomingHTML||'<div style="color:var(--faint);font-size:12px;padding:8px 0">Inga kommande möten</div>'}</div>
+        </div>
       </div>
-    </div>
-    <div class="cal-grid">${dHeaders}${cells}</div>`;
+    </div>`;
 }
 
 function calNav(d) {
@@ -1455,8 +1498,46 @@ function calNav(d) {
   render();
 }
 
-function connectGcal() {
-  showToast('Google Kalender: Lägg till OAuth-nyckel i inställningarna för att synka din kalender!');
+function bookNewMeeting(prefill) {
+  prefill = prefill || {};
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-title">📅 Boka möte</div>
+    <div class="form-group"><label class="form-label">Titel</label><input class="form-input" id="bm-title" value="${prefill.title||'Samify AI x '}"></div>
+    <div class="form-group"><label class="form-label">Datum</label><input class="form-input" id="bm-date" type="date" value="${prefill.date||''}"></div>
+    <div style="display:flex;gap:8px">
+      <div class="form-group" style="flex:1"><label class="form-label">Starttid</label><input class="form-input" id="bm-start" type="time" value="10:00"></div>
+      <div class="form-group" style="flex:1"><label class="form-label">Sluttid</label><input class="form-input" id="bm-end" type="time" value="11:00"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Gäst (e-post)</label><input class="form-input" id="bm-guest" value="${prefill.guest||''}" placeholder="kontakt@foretag.se"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-p" onclick="createGcalEvent()">📅 Skapa i Google Calendar</button>
+      <button class="btn btn-g" onclick="closeModal()">Avbryt</button>
+    </div>`;
+  document.getElementById('modal').classList.add('show');
+}
+
+function createGcalEvent() {
+  const title=document.getElementById('bm-title').value;
+  const date=document.getElementById('bm-date').value;
+  const start=document.getElementById('bm-start').value;
+  const end=document.getElementById('bm-end').value;
+  const guest=document.getElementById('bm-guest').value;
+  if(!title||!date||!start) return;
+  const fmt = s => s.replace(/[-:]/g,'');
+  const url = `https://calendar.google.com/calendar/render?action=TEMPLATE`
+    +`&text=${encodeURIComponent(title)}`
+    +`&dates=${fmt(date+'T'+start+':00')}/${fmt(date+'T'+end+':00')}`
+    +(guest?`&add=${encodeURIComponent(guest)}`:'')
+    +`&details=${encodeURIComponent('Bokat via Samify CRM')}`;
+  window.open(url,'_blank');
+  closeModal();
+  showToast('📅 Google Calendar öppnat — bekräfta och spara mötet');
+}
+
+function bookMeetingFromDeal(co) {
+  closeModal();
+  const deal = pipeline.find(p=>p.co===co);
+  bookNewMeeting({title:`Samify AI x ${co}`, guest: deal?.email||''});
 }
 
 // ═══════════════════════════════════════════════════════
