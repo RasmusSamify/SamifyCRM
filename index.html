@@ -546,12 +546,13 @@ function showLoading() {
 }
 
 const kbCols = [
-  {id:'prospekt', label:'Prospekt', color:'var(--dim)'},
-  {id:'kontaktad', label:'Kontaktad', color:'var(--pur)'},
-  {id:'demo', label:'Demo bokat', color:'var(--warn)'},
-  {id:'offert', label:'Offert skickad', color:'var(--acc)'},
-  {id:'uppföljning', label:'Uppföljning', color:'var(--ok)'},
-  {id:'förlorad', label:'Förlorad', color:'var(--err)'},
+  {id:'prospekt',    label:'Prospekt',       color:'var(--dim)'},
+  {id:'kontaktad',   label:'Kontaktad',      color:'var(--pur)'},
+  {id:'demo',        label:'Demo bokat',     color:'var(--warn)'},
+  {id:'offert',      label:'Offert skickad', color:'var(--acc)'},
+  {id:'uppföljning', label:'Uppföljning',    color:'var(--ok)'},
+  {id:'vunnen',      label:'Vunnen 🏆',      color:'#4ade80'},
+  {id:'förlorad',    label:'Förlorad',       color:'var(--err)'},
 ];
 
 // ─── DEMO MODE ───────────────────────────────────────────
@@ -622,7 +623,7 @@ const fmt = n => fmtSEK(n) + ' kr';
 const totalMRR = () => clients.reduce((a,c) => a+c.mrr, 0);
 const pending = () => invoices.filter(i=>i.st==='pending').reduce((a,i)=>a+i.am,0);
 const overdue = () => invoices.filter(i=>i.st==='overdue').reduce((a,i)=>a+i.am,0);
-const pipeActive = () => pipeline.filter(p=>p.ph!=='förlorad').reduce((a,p)=>a+p.val,0);
+const pipeActive = () => pipeline.filter(p=>p.ph!=='förlorad'&&p.ph!=='vunnen').reduce((a,p)=>a+p.val,0);
 
 function statusBdg(st) {
   if (st==='paid') return '<span class="bdg bdg-ok">Betald</span>';
@@ -1539,8 +1540,9 @@ function renderPipe() {
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
       <div style="display:flex;gap:7px;flex-wrap:wrap">
         <span class="bdg bdg-acc">Pipeline: ${fmt(pipeActive())}</span>
-        <span class="bdg bdg-ok">${pipeline.filter(p=>p.ph!=='förlorad').length} aktiva deals</span>
+        <span class="bdg bdg-ok">${pipeline.filter(p=>p.ph!=='förlorad'&&p.ph!=='vunnen').length} aktiva deals</span>
         <span class="bdg bdg-warn">${pipeline.filter(p=>p.ph==='offert').length} offert/ar ute</span>
+        ${pipeline.filter(p=>p.ph==='vunnen').length > 0 ? `<span class="bdg" style="background:rgba(74,222,128,.13);color:#4ade80">🏆 ${pipeline.filter(p=>p.ph==='vunnen').length} vunna — ${fmt(pipeline.filter(p=>p.ph==='vunnen').reduce((a,p)=>a+p.val,0))}</span>` : ''}
       </div>
       <button class="btn btn-p btn-sm" onclick="showNewDealModal()">+ Ny deal</button>
     </div>
