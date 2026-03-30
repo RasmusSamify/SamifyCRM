@@ -2128,45 +2128,139 @@ function handleExpenseFile(e) {
   simulateExpenseAI(e.target.files[0].name);
 }
 
-function simulateExpenseAI(fname) {
+async function simulateExpenseAI(fname) {
   const r = document.getElementById('ai-expense-result');
   if (!r) return;
   r.innerHTML = `<div class="cc" style="border-color:var(--pur);margin-bottom:14px">
     <div style="display:flex;justify-content:space-between;align-items:center">
-      <span class="card-ht" style="color:var(--pur)">🤖 AI läser ${fname}...</span>
-      <span class="ai-pill"><span class="ai-dot"></span>Claude Vision</span>
+      <span class="card-ht" style="color:var(--pur)">🤖 AI analyserar ${fname}...</span>
+      <span class="ai-pill"><span class="ai-dot"></span>Claude AI</span>
     </div>
-    <div style="color:var(--dim);font-size:13px;margin-top:8px">Extraherar tjänst, belopp, valuta och nästa faktureringsdatum...</div>
+    <div style="color:var(--dim);font-size:13px;margin-top:8px">Extraherar tjänst, belopp, valuta, typ (engång/löpande) och datum...</div>
   </div>`;
 
-  const demos = [
-    {name:'Zapier', cat:'Automation', am:69, currency:'USD', amSEK:735, cycle:'Månadsvis', nextDate:'2026-05-08', note:'Professional plan — auto-detected'},
-    {name:'OpenAI', cat:'AI & Modeller', am:20, currency:'USD', amSEK:213, cycle:'Månadsvis', nextDate:'2026-04-22', note:'ChatGPT Team — auto-detected'},
-    {name:'Make (Integromat)', cat:'Automation', am:9, currency:'USD', amSEK:96, cycle:'Månadsvis', nextDate:'2026-04-18', note:'Core plan — auto-detected'},
-  ];
-  const ex = demos[Math.floor(Math.random()*demos.length)];
+  // Fetch live USD→SEK rate
+  let usdRate = 10.65;
+  let eurRate = 11.20;
+  try {
+    const fx = await fetch('https://api.frankfurter.app/latest?from=USD&to=SEK,EUR');
+    const fxData = await fx.json();
+    if (fxData?.rates?.SEK) usdRate = fxData.rates.SEK;
+    if (fxData?.rates?.EUR) eurRate = usdRate / fxData.rates.EUR * 11.2; // approx
+  } catch(e) { /* använd fallback */ }
 
-  setTimeout(() => {
-    r.innerHTML = `<div class="cc" style="border-color:var(--ok);margin-bottom:14px">
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px;align-items:center">
-        <span class="card-ht" style="color:var(--ok)">✓ AI extraherade kostnad från faktura</span>
-        <button class="btn btn-p btn-sm" onclick="addExtractedExpense(${JSON.stringify(ex).replace(/"/g,"'")})">+ Lägg till</button>
-      </div>
-      <div class="cc-meta">
-        <div class="cc-mk"><div class="cc-ml">Tjänst</div><div class="cc-mv">${ex.name}</div></div>
-        <div class="cc-mk"><div class="cc-ml">Kategori</div><div class="cc-mv">${ex.cat}</div></div>
-        <div class="cc-mk"><div class="cc-ml">Belopp</div><div class="cc-mv" style="color:var(--err)">${fmtSEK(ex.amSEK)} kr/mån</div></div>
-        <div class="cc-mk"><div class="cc-ml">Cykel</div><div class="cc-mv">${ex.cycle}</div></div>
-        <div class="cc-mk"><div class="cc-ml">Nästa fakturering</div><div class="cc-mv">${ex.nextDate}</div></div>
-      </div>
-    </div>`;
-  }, 2200);
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: `Du är en AI som analyserar fakturor och kvitton för Samify Group AB.
+Extrahera följande information och returnera BARA giltig JSON, inga backticks, inga kommentarer:
+{
+  "name": "Tjänstens namn (t.ex. 'Anthropic Claude API', 'Zapier', 'Netlify')",
+  "category": "En av: AI & Modeller | Automation | Hosting & Deploy | Backend & Databas | Ekonomi | Produktivitet | Marknadsföring | Övrigt",
+  "amount": 6.50,
+  "currency": "USD",
+  "billing_type": "onetime ELLER recurring",
+  "billing_reason": "Kort förklaring varför (t.ex. 'API-användning faktureras per förbrukning' eller 'Månadsabonnemang')",
+  "next_date": "YYYY-MM-DD (nästa faktureringsdatum om löpande, annars fakturadatum)",
+  "expense_month": "YYYY-MM (månaden fakturan gäller, om engång)",
+  "note": "Kort anteckning om vad det avser"
 }
 
-function addExtractedExpense(ex) {
-  expenses.push({id:Date.now(), name:ex.name, cat:ex.cat, am:ex.am, currency:ex.currency, amSEK:ex.amSEK, cycle:ex.cycle, nextDate:ex.nextDate, st:'active', note:ex.note, url:''});
+VIKTIGT för billing_type:
+- "onetime" = engångskostnad, förbrukningskostnad (t.ex. API-användning, éngångslicens, setup-avgift)
+- "recurring" = löpande abonnemang som debiteras varje månad/år automatiskt
+
+Exempel engång: Anthropic API-faktura på $6.50 för förbrukning = onetime
+Exempel löpande: Zapier $69/mån = recurring`,
+        messages: [{
+          role: 'user',
+          content: `Analysera denna faktura från filen "${fname}". Returnera JSON med all extraktion.`
+        }]
+      })
+    });
+
+    const data = await res.json();
+    const raw = data.content?.[0]?.text || '{}';
+    let ex;
+    try { ex = JSON.parse(raw.replace(/```json|```/g,'').trim()); }
+    catch(e) { throw new Error('JSON-parse misslyckades: ' + raw.slice(0,100)); }
+
+    // Konvertera till SEK med live-kurs
+    const rate = ex.currency === 'USD' ? usdRate : ex.currency === 'EUR' ? eurRate : 1;
+    const amSEK = Math.round((ex.amount || 0) * rate);
+    const isOnetime = ex.billing_type === 'onetime';
+    const thisMonth = new Date().toISOString().slice(0,7);
+    const expMonth = isOnetime ? (ex.expense_month || thisMonth) : null;
+
+    const exResult = {
+      name: ex.name || fname,
+      cat: ex.category || 'Övrigt',
+      am: ex.amount || 0,
+      currency: ex.currency || 'SEK',
+      amSEK,
+      expType: isOnetime ? 'onetime' : 'recurring',
+      cycle: isOnetime ? 'Engångskostnad' : 'Månadsvis',
+      nextDate: ex.next_date || new Date().toISOString().split('T')[0],
+      expMonth,
+      note: ex.note || '',
+      billingReason: ex.billing_reason || ''
+    };
+
+    const beloppsText = ex.currency !== 'SEK'
+      ? `${ex.amount} ${ex.currency} → <b>${fmtSEK(amSEK)} kr</b> (kurs: ${rate.toFixed(2)})`
+      : `<b>${fmtSEK(amSEK)} kr</b>`;
+
+    r.innerHTML = `<div class="cc" style="border-color:var(--ok);margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:10px;align-items:center;flex-wrap:wrap;gap:8px">
+        <span class="card-ht" style="color:var(--ok)">✓ AI extraherade kostnad</span>
+        <button class="btn btn-p btn-sm" onclick="addExtractedExpense(${JSON.stringify(exResult).replace(/"/g,"'")})">+ Lägg till</button>
+      </div>
+      <div class="cc-meta">
+        <div class="cc-mk"><div class="cc-ml">Tjänst</div><div class="cc-mv">${exResult.name}</div></div>
+        <div class="cc-mk"><div class="cc-ml">Kategori</div><div class="cc-mv">${exResult.cat}</div></div>
+        <div class="cc-mk"><div class="cc-ml">Belopp</div><div class="cc-mv" style="color:var(--err)">${beloppsText}</div></div>
+        <div class="cc-mk"><div class="cc-ml">Typ</div><div class="cc-mv"><span class="bdg ${isOnetime?'bdg-warn':'bdg-info'}">${isOnetime?'⚡ Engångskostnad':'📅 Löpande'}</span></div></div>
+        ${isOnetime ? `<div class="cc-mk"><div class="cc-ml">Tillhör månad</div><div class="cc-mv">${expMonth}</div></div>` : `<div class="cc-mk"><div class="cc-ml">Nästa fakturering</div><div class="cc-mv">${exResult.nextDate}</div></div>`}
+        ${exResult.billingReason ? `<div class="cc-mk" style="flex-basis:100%"><div class="cc-ml">AI-bedömning</div><div class="cc-mv" style="color:var(--dim);font-size:11.5px">${exResult.billingReason}</div></div>` : ''}
+      </div>
+    </div>`;
+
+  } catch(e) {
+    r.innerHTML = `<div class="cc" style="border-color:var(--warn);margin-bottom:14px">
+      <div style="color:var(--warn);font-size:13px">⚠️ Kunde inte läsa fakturan automatiskt — fyll i manuellt nedan</div>
+      <div style="color:var(--faint);font-size:11px;margin-top:4px">${e.message}</div>
+    </div>`;
+    showAddExpenseModal();
+  }
+}
+
+async function addExtractedExpense(ex) {
   document.getElementById('ai-expense-result').innerHTML = '';
+  const rows = await sbPost('expenses', {
+    name: ex.name,
+    category: ex.cat,
+    amount_original: ex.am,
+    currency: ex.currency,
+    amount_sek: ex.amSEK,
+    billing_cycle: ex.cycle,
+    next_date: ex.expType === 'onetime' ? (ex.expMonth ? ex.expMonth + '-01' : ex.nextDate) : ex.nextDate,
+    status: 'active',
+    note: ex.note,
+    expense_type: ex.expType,
+    expense_month: ex.expMonth || null
+  });
+  if (rows?.[0]) expenses.push(mapExpenses([rows[0]])[0]);
+  else expenses.push({
+    id: Date.now(), name: ex.name, cat: ex.cat, amSEK: ex.amSEK,
+    cycle: ex.cycle, nextDate: ex.nextDate, st: 'active', note: ex.note,
+    expType: ex.expType, expMonth: ex.expMonth
+  });
   render();
+  showToast(`✓ ${ex.name} tillagd som ${ex.expType === 'onetime' ? 'engångskostnad' : 'abonnemang'} (${fmtSEK(ex.amSEK)} kr)`);
 }
 
 async function deleteExpense(id) {
