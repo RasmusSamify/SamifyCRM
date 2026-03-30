@@ -8,6 +8,35 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#09090f;--surf:#0d0d1a;--card:#121220;--border:#1c1c30;--border2:#242440;--acc:#f0a020;--acc2:rgba(240,160,32,.12);--pur:#8b80ff;--pur2:rgba(139,128,255,.11);--txt:#ddddf5;--dim:#6a6a98;--faint:#2e2e50;--ok:#34d399;--warn:#fbbf24;--err:#f87171;--r:10px}
+
+/* LIGHT THEME */
+body.theme-light{
+  --bg:#f4f5f7;--surf:#ffffff;--card:#ffffff;--border:#e2e4e9;--border2:#d0d3db;
+  --txt:#1a1d27;--dim:#6b7280;--faint:#c4c9d4;--acc:#d4870a;--acc2:rgba(212,135,10,.1);
+  --pur:#6c63ff;--pur2:rgba(108,99,255,.1);--ok:#059669;--warn:#d97706;--err:#dc2626;
+}
+body.theme-light .bar{background:linear-gradient(to top,var(--acc),rgba(212,135,10,.3))}
+body.theme-light .prog-f{background:linear-gradient(to right,var(--acc),#e6a020)}
+
+/* LOGIN SCREEN */
+#login-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:500;align-items:center;justify-content:center;flex-direction:column}
+#login-screen.show{display:flex}
+.login-box{background:var(--card);border:1px solid var(--border2);border-radius:18px;padding:36px 32px;width:100%;max-width:380px;text-align:center}
+.login-logo{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--acc);margin-bottom:4px}
+.login-sub{font-size:12px;color:var(--dim);margin-bottom:28px;text-transform:uppercase;letter-spacing:2px}
+.login-err{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--err);font-size:12.5px;padding:9px 13px;border-radius:8px;margin-bottom:14px;display:none}
+
+/* THEME TOGGLE */
+.theme-btn{width:32px;height:32px;border-radius:50%;background:var(--border);border:none;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0}
+.theme-btn:hover{background:var(--border2)}
+
+/* AVATAR WITH IMAGE */
+.ava img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.ava-upload-zone{border:2px dashed var(--border2);border-radius:50%;width:80px;height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;margin:0 auto 16px;transition:border-color .15s;overflow:hidden;position:relative}
+.ava-upload-zone:hover{border-color:var(--acc)}
+.ava-upload-zone img{width:100%;height:100%;object-fit:cover}
+.ava-upload-zone .ava-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);border-radius:50%;opacity:0;transition:opacity .15s;font-size:11px;color:#fff;font-weight:600}
+.ava-upload-zone:hover .ava-hint{opacity:1}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;overflow:hidden}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);display:flex;height:100vh}
@@ -310,11 +339,29 @@ body.demo-active .logo-name::after{content:' DEMO';font-size:9px;color:#ff6b35;m
   <div class="modal" id="modal-body"></div>
 </div>
 
+<div id="login-screen" class="show">
+  <div class="login-box">
+    <div class="login-logo">SAMIFY</div>
+    <div class="login-sub">CRM · Samify Group AB</div>
+    <div class="login-err" id="login-err">Fel e-post eller lösenord</div>
+    <div class="form-group" style="text-align:left;margin-bottom:12px">
+      <label class="form-label">E-postadress</label>
+      <input class="form-input" id="login-email" type="email" placeholder="adnan@samify.se" autocomplete="email">
+    </div>
+    <div class="form-group" style="text-align:left;margin-bottom:20px">
+      <label class="form-label">Lösenord</label>
+      <input class="form-input" id="login-pw" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn btn-p" style="width:100%;padding:11px;font-size:14px" onclick="doLogin()" id="login-btn">Logga in</button>
+    <div style="margin-top:16px;font-size:11px;color:var(--faint)">Samify CRM · Intern åtkomst</div>
+  </div>
+</div>
+
 <!-- SIDEBAR -->
 <aside class="side" id="side">
   <div class="logo-area">
     <div class="logo-name">SAMIFY</div>
-    <div class="logo-sub">CRM · ZicLun AB</div>
+    <div class="logo-sub">CRM · Samify Group AB</div>
   </div>
   <div class="nav-wrap">
     <div class="nav-sec">
@@ -370,13 +417,15 @@ body.demo-active .logo-name::after{content:' DEMO';font-size:9px;color:#ff6b35;m
     <span class="topbar-title" id="pt">Dashboard</span>
     <div class="topbar-r">
       <div class="ai-pill"><span class="ai-dot"></span>Samify AI aktiv</div>
+      <button class="theme-btn" onclick="toggleTheme()" id="theme-btn" title="Byt tema">🌙</button>
       <button class="demo-badge" onclick="toggleDemo()" id="demo-btn">🎭 Demo</button>
-      <div class="ava" title="Adnan & Rasmus">SA</div>
+      <div class="ava" id="user-ava" title="Meny" onclick="showUserMenu()" style="cursor:pointer">SA</div>
     </div>
   </header>
   <div class="content" id="ct"></div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ═══════════════════════════════════════════════════════
 //  SUPABASE CONFIG
@@ -384,32 +433,244 @@ body.demo-active .logo-name::after{content:' DEMO';font-size:9px;color:#ff6b35;m
 const SB_URL = 'https://axypazcbgcogtdqqimvi.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4eXBhemNiZ2NvZ3RkcXFpbXZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MTQzNTQsImV4cCI6MjA5MDM5MDM1NH0.UJmVxHtK1SUWjkiXBO6KlRsAAy4pFo9B32dtnhWGy7E';
 
+const sbClient = supabase.createClient(SB_URL, SB_KEY);
+
+// ═══════════════════════════════════════════════════════
+//  AUTH STATE
+// ═══════════════════════════════════════════════════════
+let currentUser = null;
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pw    = document.getElementById('login-pw').value;
+  const btn   = document.getElementById('login-btn');
+  const err   = document.getElementById('login-err');
+  err.style.display = 'none';
+  btn.textContent = 'Loggar in...';
+  btn.disabled = true;
+
+  const { data, error } = await sbClient.auth.signInWithPassword({email, password:pw});
+  if (error) {
+    err.style.display = 'block';
+    btn.textContent = 'Logga in';
+    btn.disabled = false;
+    return;
+  }
+  await onLogin(data.user);
+}
+
+async function onLogin(user) {
+  currentUser = user;
+  document.getElementById('login-screen').classList.remove('show');
+
+  // Load preferences
+  const { data: prefs } = await sbClient
+    .from('user_preferences')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  const name = prefs?.display_name || user.email;
+  const initials = name.slice(0,2).toUpperCase();
+  const theme = prefs?.theme || 'dark';
+  const avatarUrl = prefs?.avatar_url || null;
+
+  // Store prefs globally for showUserMenu
+  currentUser._prefs = prefs || {};
+  currentUser._name = name;
+  currentUser._initials = initials;
+
+  // Update avatar in topbar
+  updateAvaDisplay(avatarUrl, initials);
+
+  // Apply theme
+  applyTheme(theme);
+
+  // Update sidebar footer
+  const sf = document.querySelector('.side-version');
+  if (sf) sf.textContent = `Inloggad som ${name} · Samify CRM v1.0`;
+
+  // Load data
+  loadData();
+}
+
+function updateAvaDisplay(avatarUrl, initials) {
+  const ava = document.getElementById('user-ava');
+  if (!ava) return;
+  if (avatarUrl) {
+    ava.innerHTML = `<img src="${avatarUrl}?t=${Date.now()}" alt="${initials}" onerror="this.parentElement.innerHTML='${initials}'">`;
+    ava.title = 'Profil';
+  } else {
+    ava.innerHTML = initials || 'SA';
+    ava.title = 'Profil';
+  }
+}
+
+async function doLogout() {
+  await sbClient.auth.signOut();
+  currentUser = null;
+  document.getElementById('login-screen').classList.add('show');
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-pw').value = '';
+  document.getElementById('login-btn').textContent = 'Logga in';
+  document.getElementById('login-btn').disabled = false;
+  closeModal();
+}
+
+function showUserMenu() {
+  const prefs = currentUser?._prefs || {};
+  const name  = currentUser?._name || currentUser?.email || '—';
+  const initials = currentUser?._initials || 'SA';
+  const avatarUrl = prefs.avatar_url || null;
+  const isLight = document.body.classList.contains('theme-light');
+
+  document.getElementById('modal-body').innerHTML = `
+    <input type="file" id="ava-file-input" accept="image/*" style="display:none" onchange="handleAvatarUpload(event)">
+    <div style="text-align:center;margin-bottom:18px">
+      <div class="ava-upload-zone" onclick="document.getElementById('ava-file-input').click()" title="Byt profilbild">
+        ${avatarUrl
+          ? `<img src="${avatarUrl}?t=${Date.now()}" alt="${initials}">`
+          : `<div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--acc)">${initials}</div>`
+        }
+        <div class="ava-hint">📷 Byt</div>
+      </div>
+      <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700">${name}</div>
+      <div style="font-size:12px;color:var(--dim);margin-top:2px">${currentUser?.email}</div>
+      <div id="ava-upload-status" style="font-size:11px;color:var(--dim);margin-top:6px"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tema</label>
+      <div style="display:flex;gap:8px">
+        <button class="btn ${!isLight?'btn-p':'btn-g'}" onclick="setTheme('dark')" style="flex:1">🌙 Mörkt</button>
+        <button class="btn ${isLight?'btn-p':'btn-g'}" onclick="setTheme('light')" style="flex:1">☀️ Ljust</button>
+      </div>
+    </div>
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);display:flex;gap:8px">
+      ${avatarUrl ? `<button class="btn btn-g btn-sm" onclick="removeAvatar()">🗑 Ta bort bild</button>` : ''}
+      <button class="btn btn-g" style="flex:1;color:var(--err)" onclick="doLogout()">🚪 Logga ut</button>
+    </div>`;
+  document.getElementById('modal').classList.add('show');
+}
+
+async function handleAvatarUpload(e) {
+  const file = e.target.files?.[0];
+  if (!file || !currentUser) return;
+
+  const status = document.getElementById('ava-upload-status');
+  if (status) status.textContent = 'Laddar upp...';
+
+  // Resize image client-side before upload
+  const canvas = document.createElement('canvas');
+  const img = new Image();
+  img.onload = async () => {
+    const size = 200;
+    canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    // Crop to square from center
+    const min = Math.min(img.width, img.height);
+    const sx = (img.width - min) / 2;
+    const sy = (img.height - min) / 2;
+    ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
+    canvas.toBlob(async (blob) => {
+      const path = `${currentUser.id}.jpg`;
+      const { error } = await sbClient.storage
+        .from('avatars')
+        .upload(path, blob, {contentType:'image/jpeg', upsert:true});
+
+      if (error) {
+        if (status) status.textContent = '⚠️ Uppladdning misslyckades';
+        return;
+      }
+
+      const { data: urlData } = sbClient.storage.from('avatars').getPublicUrl(path);
+      const avatarUrl = urlData.publicUrl;
+
+      // Save to preferences
+      await sbClient.from('user_preferences')
+        .upsert({id: currentUser.id, avatar_url: avatarUrl, updated_at: new Date().toISOString()});
+
+      currentUser._prefs.avatar_url = avatarUrl;
+      updateAvaDisplay(avatarUrl, currentUser._initials);
+
+      if (status) status.textContent = '✓ Profilbild uppdaterad!';
+      // Refresh modal to show new image
+      setTimeout(() => showUserMenu(), 800);
+    }, 'image/jpeg', 0.88);
+  };
+  img.src = URL.createObjectURL(file);
+}
+
+async function removeAvatar() {
+  if (!currentUser) return;
+  const path = `${currentUser.id}.jpg`;
+  await sbClient.storage.from('avatars').remove([path]);
+  await sbClient.from('user_preferences')
+    .upsert({id: currentUser.id, avatar_url: null, updated_at: new Date().toISOString()});
+  currentUser._prefs.avatar_url = null;
+  updateAvaDisplay(null, currentUser._initials);
+  showUserMenu();
+}
+
+// ═══════════════════════════════════════════════════════
+//  THEME
+// ═══════════════════════════════════════════════════════
+function applyTheme(theme) {
+  const btn = document.getElementById('theme-btn');
+  if (theme === 'light') {
+    document.body.classList.add('theme-light');
+    if (btn) btn.textContent = '☀️';
+  } else {
+    document.body.classList.remove('theme-light');
+    if (btn) btn.textContent = '🌙';
+  }
+}
+
+function toggleTheme() {
+  const isLight = document.body.classList.contains('theme-light');
+  setTheme(isLight ? 'dark' : 'light');
+}
+
+async function setTheme(theme) {
+  applyTheme(theme);
+  if (currentUser) {
+    await sbClient.from('user_preferences')
+      .upsert({id: currentUser.id, theme, updated_at: new Date().toISOString()});
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  SUPABASE REST (authenticated via session token)
+// ═══════════════════════════════════════════════════════
+
+async function getAuthHeaders() {
+  const { data } = await sbClient.auth.getSession();
+  const token = data?.session?.access_token || SB_KEY;
+  return {'apikey': SB_KEY, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'};
+}
+
 async function sbGet(table, params='') {
-  const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, {
-    headers: {'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`}
-  });
+  const h = await getAuthHeaders();
+  const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, {headers: h});
   return r.json();
 }
 async function sbPost(table, body) {
+  const h = await getAuthHeaders();
   const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
-    method: 'POST',
-    headers: {'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation'},
-    body: JSON.stringify(body)
+    method:'POST', headers:{...h,'Prefer':'return=representation'}, body:JSON.stringify(body)
   });
   return r.json();
 }
 async function sbPatch(table, id, body) {
+  const h = await getAuthHeaders();
   const r = await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`, {
-    method: 'PATCH',
-    headers: {'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json'},
-    body: JSON.stringify(body)
+    method:'PATCH', headers:h, body:JSON.stringify(body)
   });
   return r.ok;
 }
 async function sbDelete(table, id) {
+  const h = await getAuthHeaders();
   const r = await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`, {
-    method: 'DELETE',
-    headers: {'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`}
+    method:'DELETE', headers:h
   });
   return r.ok;
 }
@@ -941,8 +1202,8 @@ async function sendReminder(invoiceId) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
-        system: `Du är Rasmus på Samify (ZicLun AB). Skriv ett professionellt, vänligt men tydligt betalningspåminnelse-mail på svenska. 
-Avsändare: Rasmus Larsson, Samify / ZicLun AB, rasmus@samify.se
+        system: `Du är Rasmus på Samify (Samify Group AB). Skriv ett professionellt, vänligt men tydligt betalningspåminnelse-mail på svenska. 
+Avsändare: Rasmus Larsson, Samify / Samify Group AB, rasmus@samify.se
 Inga hälsningsfras som "Hoppas du har det bra" — gå rakt på sak. Avsluta med betalningsinformation: Bankgiro 1234-5678, märk betalningen med fakturanummer. Signera med Rasmus Larsson, Samify.
 Returnera BARA mejlets body-text, ingen subject-rad, inga extra kommentarer.`,
         messages: [{
@@ -2073,7 +2334,7 @@ ${activityLog.filter(a=>a.cl===matchedClient.n).slice(0,3).map(a=>`- ${a.content
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
-        system: `Du är AI-assistent för Samify (ZicLun AB) i Kalmar. Skriv en kort och skarp mötesbrief på svenska. 
+        system: `Du är AI-assistent för Samify (Samify Group AB) i Kalmar. Skriv en kort och skarp mötesbrief på svenska. 
 Format:
 🎯 **Syfte** — vad vill vi uppnå på detta möte?
 📋 **Bakgrund** — vad vet vi om motparten?
@@ -2159,7 +2420,7 @@ async function aiSend() {
     msgs.scrollTop = msgs.scrollHeight;
   }
 
-  const sysPrompt = `Du är AI-affärsassistent för Samify, ett AI- och automationsbolag i Sverige (ZicLun AB).
+  const sysPrompt = `Du är AI-affärsassistent för Samify, ett AI- och automationsbolag i Sverige (Samify Group AB).
 Medgrundarna är Adnan (sälj, marknad, affärsutveckling) och Rasmus (IT, produkt, sälj).
 
 Du har full kontext om kunden ${c.n}:
@@ -2271,8 +2532,14 @@ window.render = function() {
   setupKostDrop();
 };
 
-// Boot — load live data from Supabase
-loadData();
+// Boot — check for existing session
+(async () => {
+  const { data } = await sbClient.auth.getSession();
+  if (data?.session?.user) {
+    await onLogin(data.session.user);
+  }
+  // else: login screen stays visible
+})();
 </script>
 </body>
 </html>
