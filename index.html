@@ -975,7 +975,7 @@ function showNewInvoiceModal() {
   document.getElementById('modal-body').innerHTML = `
     <div class="modal-title">Ny faktura</div>
     <div class="form-group"><label class="form-label">Kund</label>
-      <select class="form-input" id="m-cl">${clients.map(c=>`<option>${c.n}</option>`).join('')}</select></div>
+      <select class="form-input" id="m-cl">${clients.length ? clients.map(c=>`<option>${c.n}</option>`).join('') : '<option>— Inga kunder tillagda —</option>'}</select></div>
     <div class="form-group"><label class="form-label">Belopp (SEK)</label><input class="form-input" id="m-am" type="number" placeholder="3999"></div>
     <div class="form-group"><label class="form-label">Förfallodatum</label><input class="form-input" id="m-due" type="date" value="2026-04-30"></div>
     <div class="form-group"><label class="form-label">Kategori</label><input class="form-input" id="m-cat" placeholder="Månadsavgift April"></div>
@@ -1081,7 +1081,19 @@ function addContract() {
 //  KUNDER
 // ═══════════════════════════════════════════════════════
 function renderKund() {
-  const c = clients[S.cu];
+  // ── Empty state ──────────────────────────────────────
+  if (!clients || clients.length === 0) {
+    return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;gap:16px;text-align:center">
+      <div style="font-size:40px;opacity:.3">👥</div>
+      <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700">Inga kunder ännu</div>
+      <div style="color:var(--dim);font-size:13px;max-width:320px">Lägg till era första kunder för att börja spåra MRR, projekt, tid och hälsa.</div>
+      <button class="btn btn-p" onclick="showNewClientModal()">+ Lägg till kund</button>
+    </div>`;
+  }
+
+  const c = clients[S.cu] || clients[0];
+  if (S.cu >= clients.length) S.cu = 0;
+
   const cuList = clients.map((cl,i) => {
     const h = calcHealth(cl);
     return `<div class="cu-item${i===S.cu?' on':''}" onclick="selCu(${i})">
@@ -1288,14 +1300,22 @@ const resp = await fetch(
   }
 
   return `<div class="cu-wrap">
-    <div class="cu-list">${cuList}</div>
-    <div style="display:flex;flex-direction:column;min-height:0">
-      <div style="margin-bottom:14px">
-        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin-bottom:5px">${c.n}</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <span class="bdg bdg-ok">Aktiv kund</span>
-          <span class="bdg bdg-info">${c.svc}</span>
+    <div style="display:flex;flex-direction:column;height:100%">
+      <div style="padding:8px 8px 4px;border-bottom:1px solid var(--border);flex-shrink:0">
+        <button class="btn btn-p btn-sm" style="width:100%" onclick="showNewClientModal()">+ Ny kund</button>
+      </div>
+      <div class="cu-list" style="flex:1;border-radius:0;border:none;border-right:1px solid var(--border)">${cuList}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;min-height:0;overflow:hidden">
+      <div style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin-bottom:5px">${c.n}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <span class="bdg bdg-ok">Aktiv kund</span>
+            <span class="bdg bdg-info">${c.svc||'Tjänst ej angiven'}</span>
+          </div>
         </div>
+        <button class="btn btn-g btn-sm" onclick="deleteClient('${c.id}')">🗑 Ta bort kund</button>
       </div>
       <div class="tabs" style="margin-bottom:14px">${tabsHTML}</div>
       <div style="overflow-y:auto;flex:1">${content}</div>
@@ -1305,6 +1325,63 @@ const resp = await fetch(
 
 function selCu(i) { S.cu=i; S.chat=[]; S.kTab='Översikt'; render(); }
 function setKTab(t) { S.kTab=t; if(t!=='AI-assistent') S.chat=[]; render(); }
+
+function showNewClientModal() {
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-title">+ Ny kund</div>
+    <div class="form-group"><label class="form-label">Företagsnamn</label><input class="form-input" id="nc-name" placeholder="Företag AB"></div>
+    <div class="form-group"><label class="form-label">Kontaktperson</label><input class="form-input" id="nc-ct" placeholder="Förnamn Efternamn"></div>
+    <div class="form-group"><label class="form-label">E-post (kontakt)</label><input class="form-input" id="nc-email" type="email" placeholder="kontakt@foretag.se"></div>
+    <div class="form-group"><label class="form-label">Tjänst / leverans</label><input class="form-input" id="nc-svc" placeholder="t.ex. AI-chatbot + intranät"></div>
+    <div style="display:flex;gap:8px">
+      <div class="form-group" style="flex:1"><label class="form-label">MRR (kr/mån)</label><input class="form-input" id="nc-mrr" type="number" placeholder="3999"></div>
+      <div class="form-group" style="flex:1"><label class="form-label">Avtalsstart</label><input class="form-input" id="nc-cs" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Ansvarig</label>
+      <select class="form-input" id="nc-owner"><option>Adnan</option><option>Rasmus</option></select></div>
+    <div class="form-group"><label class="form-label">Beskrivning</label>
+      <textarea class="form-input" id="nc-desc" rows="2" placeholder="Kort beskrivning av vad ni byggt / levererar..." style="resize:vertical"></textarea></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-p" onclick="saveClient()">Spara kund</button>
+      <button class="btn btn-g" onclick="closeModal()">Avbryt</button>
+    </div>`;
+  document.getElementById('modal').classList.add('show');
+}
+
+async function saveClient() {
+  const name  = document.getElementById('nc-name').value.trim();
+  const ct    = document.getElementById('nc-ct').value.trim();
+  const email = document.getElementById('nc-email').value.trim();
+  const svc   = document.getElementById('nc-svc').value.trim();
+  const mrr   = parseInt(document.getElementById('nc-mrr').value) || 0;
+  const cs    = document.getElementById('nc-cs').value;
+  const owner = document.getElementById('nc-owner').value;
+  const desc  = document.getElementById('nc-desc').value.trim();
+  if (!name) return;
+  closeModal();
+  const rows = await sbPost('clients', {
+    name, contact_name:ct, email, service:svc, mrr,
+    contract_start:cs, contract_value:mrr*12, project_health:100,
+    owner, description:desc
+  });
+  const newClient = rows?.[0] ? mapClients([rows[0]])[0] : {
+    id:Date.now(), n:name, mrr, ph:100, ct, svc, cs, cv:mrr*12, desc, owner, email
+  };
+  clients.push(newClient);
+  S.cu = clients.length - 1;
+  S.kTab = 'Översikt';
+  render();
+  showToast(`✓ ${name} är nu tillagd som kund`);
+}
+
+async function deleteClient(id) {
+  if (!confirm('Ta bort kunden? All relaterad data (fakturor, tid, logg) finns kvar i Supabase.')) return;
+  clients = clients.filter(c=>c.id!==id);
+  S.cu = 0;
+  render();
+  await sbDelete('clients', id);
+  showToast('Kund borttagen');
+}
 
 function showLogTimeModal(clientName) {
   document.getElementById('modal-body').innerHTML = `
