@@ -343,7 +343,7 @@ body.demo-active .logo-name::after{content:' DEMO';font-size:9px;color:#ff6b35;m
       <div class="nav-lbl">CRM</div>
       <div class="ni" data-m="kund">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        Kunder <span class="nbadge ok" id="nb-kund">8</span>
+        Kunder <span class="nbadge ok" id="nb-kund">0</span>
       </div>
       <div class="ni" data-m="pipe">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
@@ -678,10 +678,15 @@ function afterRender(m) {
 function updateBadges() {
   const nb = document.getElementById('nb-fakt');
   if (nb) nb.textContent = invoices.filter(i=>i.st!=='paid').length;
+  const nbku = document.getElementById('nb-kund');
+  if (nbku) {
+    nbku.textContent = clients.length;
+    nbku.style.display = clients.length === 0 ? 'none' : '';
+  }
   const nbk = document.getElementById('nb-kost');
   if (nbk) {
-    const totalKost = expenses.filter(e=>e.st==='active').reduce((a,e)=>a+e.amSEK,0);
-    nbk.textContent = fmtSEK(totalKost);
+    const totalKost = expenses.filter(e=>e.st==='active'&&e.expType!=='onetime').reduce((a,e)=>a+e.amSEK,0);
+    nbk.textContent = totalKost > 0 ? fmtSEK(totalKost) : '0';
   }
 }
 
