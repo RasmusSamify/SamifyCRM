@@ -462,6 +462,10 @@ body.demo-active .logo-name::after{content:' DEMO';font-size:9px;color:#ff6b35;m
 const SB_URL = 'https://axypazcbgcogtdqqimvi.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4eXBhemNiZ2NvZ3RkcXFpbXZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MTQzNTQsImV4cCI6MjA5MDM5MDM1NH0.UJmVxHtK1SUWjkiXBO6KlRsAAy4pFo9B32dtnhWGy7E';
 
+// ── Claude AI proxy (via Supabase Edge Function) ─────
+// API-nyckeln (CLAUDE_API_KEY) ligger säkert i Supabase Secrets
+const CLAUDE_PROXY = 'https://axypazcbgcogtdqqimvi.supabase.co/functions/v1/claude-proxy';
+
 const sbClient = supabase.createClient(SB_URL, SB_KEY);
 
 // ═══════════════════════════════════════════════════════
@@ -1256,7 +1260,7 @@ async function sendReminder(invoiceId) {
   const overdueTxt = daysOverdue > 0 ? `Fakturan förföll för ${daysOverdue} dagar sedan.` : `Fakturan förfaller ${inv.due}.`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch(CLAUDE_PROXY, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
@@ -2150,7 +2154,7 @@ async function simulateExpenseAI(fname) {
   } catch(e) { /* använd fallback */ }
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch(CLAUDE_PROXY, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
@@ -2482,7 +2486,7 @@ Senaste aktiviteter:
 ${activityLog.filter(a=>a.cl===matchedClient.n).slice(0,3).map(a=>`- ${a.content} (${a.type}, ${new Date(a.at).toLocaleDateString('sv-SE')})`).join('\n')||'Inga loggade aktiviteter'}` : 'Okänd motpart — troligen ny prospect.';
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch(CLAUDE_PROXY, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
@@ -2596,7 +2600,7 @@ Ge konkreta, direkta råd på svenska om:
 Håll svaret kortfattat (3-5 meningar max), praktiskt och actionable.`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch(CLAUDE_PROXY, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
@@ -2784,7 +2788,7 @@ async function generateAIQuote() {
   showToast('🤖 AI genererar offert...');
   const client = clients.find(c=>c.n===cl);
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch(CLAUDE_PROXY, {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
         model:'claude-sonnet-4-20250514', max_tokens:1000,
@@ -2854,7 +2858,7 @@ async function sendQuoteEmail(id) {
   closeModal();
   showToast('🤖 AI skriver offertmejl...');
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch(CLAUDE_PROXY, {
       method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,
         system:'Du är Samify Group AB. Skriv ett professionellt, kortfattat offertmejl på svenska. Returnera BARA mejlbodyn.',
