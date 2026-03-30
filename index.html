@@ -492,7 +492,8 @@ function mapPipeline(rows) {
 function mapExpenses(rows) {
   return rows.map(r => ({
     id: r.id, name: r.name, cat: r.category, amSEK: r.amount_sek,
-    cycle: r.billing_cycle, nextDate: r.next_date, st: r.status, note: r.note
+    cycle: r.billing_cycle, nextDate: r.next_date, st: r.status, note: r.note,
+    expType: r.expense_type || 'recurring', expMonth: r.expense_month || null
   }));
 }
 function mapTimeEntries(rows) {
@@ -1661,31 +1662,32 @@ function kbCardClick(e, co) {
 //  KOSTNADER
 // ═══════════════════════════════════════════════════════
 function renderKost() {
-  const active = expenses.filter(e=>e.st==='active');
-  const totalSEK = active.reduce((a,e)=>a+e.amSEK,0);
-  const mrr = totalMRR();
-  const margin = mrr - totalSEK;
-  const marginPct = Math.round((margin/mrr)*100);
+  const active    = expenses.filter(e=>e.st==='active');
+  const recurring = active.filter(e=>e.expType!=='onetime');
+  const onetime   = active.filter(e=>e.expType==='onetime');
 
-  // Group by category
+  const recurSEK  = recurring.reduce((a,e)=>a+e.amSEK,0);  // månadskostnad
+  const onetimeSEK= onetime.reduce((a,e)=>a+e.amSEK,0);    // engångskostnader (visas separat)
+  const mrr = totalMRR();
+  const margin = mrr - recurSEK;
+  const marginPct = mrr > 0 ? Math.round((margin/mrr)*100) : 0;
+
+  // Group RECURRING by category for bars
   const cats = {};
-  active.forEach(e => {
+  recurring.forEach(e => {
     if (!cats[e.cat]) cats[e.cat] = [];
     cats[e.cat].push(e);
   });
 
-  // Sort upcoming by date
-  const upcoming = [...active].sort((a,b)=>new Date(a.nextDate)-new Date(b.nextDate)).slice(0,5);
+  // Upcoming RECURRING payments
+  const upcoming = [...recurring].sort((a,b)=>new Date(a.nextDate)-new Date(b.nextDate)).slice(0,5);
   const tlHTML = upcoming.map(e=>{
     const d = new Date(e.nextDate);
     const daysLeft = Math.round((d-new Date())/(1000*60*60*24));
     const urgent = daysLeft <= 7;
     return `<div class="tl-item" style="${urgent?'border-color:var(--warn)':''}">
       <div class="tl-date"><div class="tl-day" style="${urgent?'color:var(--warn)':''}">${d.getDate()}</div><div class="tl-mon">${d.toLocaleDateString('sv-SE',{month:'short'})}</div></div>
-      <div class="tl-info">
-        <div class="tl-cl">${e.name}</div>
-        <div class="tl-ds">${e.cat} · ${e.cycle}</div>
-      </div>
+      <div class="tl-info"><div class="tl-cl">${e.name}</div><div class="tl-ds">${e.cat} · ${e.cycle}</div></div>
       <div style="text-align:right">
         <div class="tl-am" style="color:var(--err)">-${fmt(e.amSEK)}</div>
         ${urgent?`<div style="font-size:9.5px;color:var(--warn);margin-top:3px">om ${daysLeft}d</div>`:''}
@@ -1693,7 +1695,7 @@ function renderKost() {
     </div>`;
   }).join('');
 
-  // Category breakdown bars
+  // Category bars (recurring only)
   const catTotals = Object.entries(cats).map(([k,v])=>({cat:k,tot:v.reduce((a,e)=>a+e.amSEK,0)})).sort((a,b)=>b.tot-a.tot);
   const maxCat = catTotals[0]?.tot||1;
   const catBars = catTotals.map(ct=>`
@@ -1705,79 +1707,88 @@ function renderKost() {
       <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--err);min-width:80px;text-align:right">${fmtSEK(ct.tot)} kr</div>
     </div>`).join('');
 
-  // Expense rows per category
-  const catSections = Object.entries(cats).map(([cat, exps])=>{
-    const catTotal = exps.reduce((a,e)=>a+e.amSEK,0);
-    const rows = exps.map(e=>{
-      const d = new Date(e.nextDate);
-      const daysLeft = Math.round((d-new Date())/(1000*60*60*24));
-      const urgent = daysLeft <= 7;
-      return `<tr>
-        <td>
-          <div style="font-weight:700;font-size:13px">${e.name}</div>
-          <div style="font-size:11px;color:var(--faint);margin-top:2px">${e.note}</div>
-        </td>
-        <td><span class="bdg bdg-neu">${e.cat}</span></td>
-        <td style="font-family:'JetBrains Mono',monospace;color:var(--err)">${fmtSEK(e.amSEK)} kr</td>
-        <td><span class="bdg bdg-info">${e.cycle}</span></td>
-        <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:${urgent?'var(--warn)':'inherit'}">${e.nextDate}${urgent?` <span style="font-size:9px;color:var(--warn)">(!)</span>`:''}</td>
-        <td style="display:flex;gap:4px">
-          <button class="btn btn-pur btn-sm" onclick="uploadExpenseInvoice(${e.id})" title="Ladda upp faktura för AI-analys">📄 AI</button>
-          <button class="btn btn-g btn-sm" onclick="deleteExpense(${e.id})">✕</button>
-        </td>
-      </tr>`;
-    }).join('');
-    return rows;
-  }).join('');
+  // Build expense rows helper
+  function expRow(e) {
+    const isOnetime = e.expType==='onetime';
+    const dateLabel = isOnetime
+      ? (e.expMonth || e.nextDate?.slice(0,7) || '—')
+      : (() => { const d=new Date(e.nextDate); const dl=Math.round((d-new Date())/(1000*60*60*24)); return `<span style="color:${dl<=7?'var(--warn)':'inherit'}">${e.nextDate}${dl<=7?' ⚠':''}</span>`; })();
+    return `<tr>
+      <td>
+        <div style="font-weight:700;font-size:13px">${e.name}</div>
+        <div style="font-size:11px;color:var(--faint);margin-top:2px">${e.note||''}</div>
+      </td>
+      <td><span class="bdg bdg-neu">${e.cat}</span></td>
+      <td style="font-family:'JetBrains Mono',monospace;color:var(--err)">${fmtSEK(e.amSEK)} kr</td>
+      <td><span class="bdg ${isOnetime?'bdg-warn':'bdg-info'}">${isOnetime?'⚡ Engång':'📅 '+e.cycle}</span></td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:12px">${dateLabel}</td>
+      <td style="display:flex;gap:4px">
+        <button class="btn btn-pur btn-sm" onclick="uploadExpenseInvoice('${e.id}')" title="AI-analys">📄 AI</button>
+        <button class="btn btn-g btn-sm" onclick="deleteExpense('${e.id}')">✕</button>
+      </td>
+    </tr>`;
+  }
+
+  const recurRows   = recurring.map(expRow).join('');
+  const onetimeRows = onetime.map(expRow).join('');
+
+  const onetimeSection = onetime.length ? `
+    <div class="card" style="margin-top:14px">
+      <div class="card-hd">
+        <span class="card-ht">⚡ Engångskostnader</span>
+        <span class="bdg bdg-warn">${fmtSEK(onetimeSEK)} kr totalt</span>
+      </div>
+      <div style="overflow-x:auto"><table class="tbl">
+        <thead><tr><th>Tjänst</th><th>Kategori</th><th>Belopp</th><th>Typ</th><th>Månad</th><th>Åtgärd</th></tr></thead>
+        <tbody>${onetimeRows}</tbody>
+      </table></div>
+    </div>` : '';
 
   return `
     <!-- STATS -->
     <div class="sgrid" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
       <div class="scard c-err" style="--c-err-after:var(--err)">
         <style>.c-err::after{background:var(--err)!important}</style>
-        <div class="slabel">Total kostnad/mån</div>
-        <div class="sval" style="color:var(--err)">${fmtSEK(totalSEK)}</div>
-        <div class="sdelta">${active.length} abonnemang aktiva</div>
+        <div class="slabel">Löpande kostnad/mån</div>
+        <div class="sval" style="color:var(--err)">${fmtSEK(recurSEK)}</div>
+        <div class="sdelta">${recurring.length} abonnemang${onetime.length?` · ${onetime.length} engång`:''}</div>
       </div>
       <div class="scard c-ok"><div class="slabel">Nettomarginal/mån</div><div class="sval" style="color:var(--ok)">${fmtSEK(margin)}</div><div class="sdelta ${marginPct>60?'up':marginPct>30?'':'dn'}">${marginPct}% marginal</div></div>
       <div class="scard c-acc"><div class="slabel">MRR (intäkter)</div><div class="sval">${fmtSEK(mrr)}</div><div class="sdelta up">↑ mot förra månaden</div></div>
-      <div class="scard c-pur"><div class="slabel">Kostnad/intäkt-ratio</div><div class="sval">${Math.round(totalSEK/mrr*100)}%</div><div class="sdelta">${Math.round(totalSEK/mrr*100)<30?'✓ Hälsosamt':'Håll koll!'}</div></div>
+      <div class="scard c-pur"><div class="slabel">Kostnad/intäkt-ratio</div><div class="sval">${mrr>0?Math.round(recurSEK/mrr*100):0}%</div><div class="sdelta">${mrr>0&&Math.round(recurSEK/mrr*100)<30?'✓ Hälsosamt':'Håll koll!'}</div></div>
     </div>
 
     <!-- DROP ZONE -->
     <div class="dz" id="dz-kost" onclick="uploadExpenseInvoice(null)">
       <input type="file" id="fi-kost" accept=".pdf,.png,.jpg,.jpeg" style="display:none" onchange="handleExpenseFile(event)">
       <div class="dz-ico">🧾</div>
-      <div class="dz-t"><b>Ladda upp en faktura (Zapier, Claude, Lovable...)</b><br>AI läser av belopp, datum och nästa faktureringsdatum automatiskt<br><small style="color:var(--faint);font-size:11px">Stöder PDF och bilder</small></div>
+      <div class="dz-t"><b>Ladda upp en faktura (Zapier, Claude, Lovable...)</b><br>AI läser av belopp, datum och faktureringstyp automatiskt<br><small style="color:var(--faint);font-size:11px">Stöder PDF och bilder</small></div>
     </div>
     <div id="ai-expense-result"></div>
 
     <div class="g2" style="margin-bottom:14px">
-      <!-- UPCOMING PAYMENTS -->
       <div class="card">
-        <div class="card-hd"><span class="card-ht">Kommande kostnader</span><span class="bdg bdg-err">${fmtSEK(upcoming.reduce((a,e)=>a+e.amSEK,0))} kr</span></div>
-        <div class="card-body" style="padding:12px"><div class="tl">${tlHTML}</div></div>
+        <div class="card-hd"><span class="card-ht">Kommande löpande kostnader</span><span class="bdg bdg-err">${fmtSEK(upcoming.reduce((a,e)=>a+e.amSEK,0))} kr</span></div>
+        <div class="card-body" style="padding:12px"><div class="tl">${tlHTML||'<div style="color:var(--faint);font-size:13px;padding:8px 0">Inga löpande kostnader registrerade</div>'}</div></div>
       </div>
-      <!-- CATEGORY BREAKDOWN -->
       <div class="card">
-        <div class="card-hd"><span class="card-ht">Kostnad per kategori</span></div>
-        <div class="card-body">${catBars}</div>
+        <div class="card-hd"><span class="card-ht">Kostnad per kategori</span><span style="font-size:11px;color:var(--dim)">Löpande</span></div>
+        <div class="card-body">${catBars||'<div style="color:var(--faint);font-size:13px">Inga löpande kostnader ännu</div>'}</div>
       </div>
     </div>
 
-    <!-- FULL LIST -->
-    <div class="card">
+    <!-- RECURRING LIST -->
+    <div class="card" style="margin-bottom:0">
       <div class="card-hd">
-        <span class="card-ht">Alla abonnemang & kostnader (${active.length})</span>
-        <button class="btn btn-p btn-sm" onclick="showAddExpenseModal()">+ Lägg till</button>
+        <span class="card-ht">📅 Löpande abonnemang (${recurring.length})</span>
+        <button class="btn btn-p btn-sm" onclick="showAddExpenseModal()">+ Lägg till kostnad</button>
       </div>
-      <div style="overflow-x:auto">
-        <table class="tbl">
-          <thead><tr><th>Tjänst</th><th>Kategori</th><th>Kostnad/mån</th><th>Cykel</th><th>Nästa fakturering</th><th>Åtgärd</th></tr></thead>
-          <tbody>${catSections}</tbody>
-        </table>
-      </div>
-    </div>`;
+      ${recurring.length ? `<div style="overflow-x:auto"><table class="tbl">
+        <thead><tr><th>Tjänst</th><th>Kategori</th><th>Kostnad/mån</th><th>Cykel</th><th>Nästa fakturering</th><th>Åtgärd</th></tr></thead>
+        <tbody>${recurRows}</tbody>
+      </table></div>` : '<div class="card-body" style="color:var(--faint);font-size:13px">Inga löpande abonnemang tillagda ännu</div>'}
+    </div>
+    ${onetimeSection}`;
 }
 
 function uploadExpenseInvoice(id) {
@@ -1837,9 +1848,15 @@ async function deleteExpense(id) {
 }
 
 function showAddExpenseModal() {
+  const thisMonth = new Date().toISOString().slice(0,7); // YYYY-MM
   document.getElementById('modal-body').innerHTML = `
-    <div class="modal-title">Lägg till abonnemang</div>
-    <div class="form-group"><label class="form-label">Tjänst / namn</label><input class="form-input" id="me-name" placeholder="t.ex. Zapier"></div>
+    <div class="modal-title">Lägg till kostnad</div>
+    <div class="form-group"><label class="form-label">Typ av kostnad</label>
+      <select class="form-input" id="me-type" onchange="toggleExpenseType()">
+        <option value="recurring">📅 Löpande abonnemang</option>
+        <option value="onetime">⚡ Engångskostnad</option>
+      </select></div>
+    <div class="form-group"><label class="form-label">Tjänst / namn</label><input class="form-input" id="me-name" placeholder="t.ex. Anthropic, Zapier"></div>
     <div class="form-group"><label class="form-label">Kategori</label>
       <select class="form-input" id="me-cat">
         <option>AI & Modeller</option><option>Automation</option><option>Hosting & Deploy</option>
@@ -1851,8 +1868,13 @@ function showAddExpenseModal() {
       <div class="form-group" style="flex:1"><label class="form-label">Valuta</label>
         <select class="form-input" id="me-cur"><option value="SEK">SEK</option><option value="USD">USD ($)</option><option value="EUR">EUR (€)</option></select></div>
     </div>
-    <div class="form-group"><label class="form-label">Nästa faktureringsdatum</label><input class="form-input" id="me-dt" type="date"></div>
-    <div class="form-group"><label class="form-label">Anteckning</label><input class="form-input" id="me-note" placeholder="Vad används det till?"></div>
+    <div id="me-recurring-fields">
+      <div class="form-group"><label class="form-label">Nästa faktureringsdatum</label><input class="form-input" id="me-dt" type="date"></div>
+    </div>
+    <div id="me-onetime-fields" style="display:none">
+      <div class="form-group"><label class="form-label">Tillhör månad</label><input class="form-input" id="me-month" type="month" value="${thisMonth}"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Anteckning</label><input class="form-input" id="me-note" placeholder="Vad avser kostnaden?"></div>
     <div style="display:flex;gap:8px;margin-top:16px">
       <button class="btn btn-p" onclick="saveExpense()">Spara</button>
       <button class="btn btn-g" onclick="closeModal()">Avbryt</button>
@@ -1860,20 +1882,41 @@ function showAddExpenseModal() {
   document.getElementById('modal').classList.add('show');
 }
 
+function toggleExpenseType() {
+  const t = document.getElementById('me-type').value;
+  document.getElementById('me-recurring-fields').style.display = t==='recurring' ? 'block' : 'none';
+  document.getElementById('me-onetime-fields').style.display  = t==='onetime'  ? 'block' : 'none';
+}
+
 async function saveExpense() {
-  const name = document.getElementById('me-name').value;
-  const cat = document.getElementById('me-cat').value;
-  const am = parseFloat(document.getElementById('me-am').value)||0;
-  const cur = document.getElementById('me-cur').value;
-  const dt = document.getElementById('me-dt').value;
-  const note = document.getElementById('me-note').value;
-  if (!name||!am||!dt) return;
-  const rate = cur==='USD'?10.65:cur==='EUR'?11.2:1;
+  const name    = document.getElementById('me-name').value.trim();
+  const cat     = document.getElementById('me-cat').value;
+  const am      = parseFloat(document.getElementById('me-am').value)||0;
+  const cur     = document.getElementById('me-cur').value;
+  const expType = document.getElementById('me-type').value;
+  const note    = document.getElementById('me-note').value;
+  if (!name||!am) return;
+  const rate  = cur==='USD'?10.65:cur==='EUR'?11.2:1;
   const amSEK = Math.round(am*rate);
+
+  let dt = null, expMonth = null, cycle = 'Månadsvis';
+  if (expType==='recurring') {
+    dt = document.getElementById('me-dt').value;
+    if (!dt) return;
+  } else {
+    expMonth = document.getElementById('me-month').value; // YYYY-MM
+    cycle = 'Engångskostnad';
+    dt = expMonth + '-01'; // dummy date for sorting
+  }
+
   closeModal();
-  const rows = await sbPost('expenses', {name, category:cat, amount_original:am, currency:cur, amount_sek:amSEK, billing_cycle:'Månadsvis', next_date:dt, status:'active', note});
-  if (rows && rows[0]) expenses.push(mapExpenses([rows[0]])[0]);
-  else expenses.push({id:Date.now(), name, cat, amSEK, cycle:'Månadsvis', nextDate:dt, st:'active', note});
+  const rows = await sbPost('expenses', {
+    name, category:cat, amount_original:am, currency:cur, amount_sek:amSEK,
+    billing_cycle:cycle, next_date:dt, status:'active', note,
+    expense_type:expType, expense_month:expMonth
+  });
+  if (rows?.[0]) expenses.push(mapExpenses([rows[0]])[0]);
+  else expenses.push({id:Date.now(), name, cat, amSEK, cycle, nextDate:dt, st:'active', note, expType, expMonth});
   render();
 }
 
