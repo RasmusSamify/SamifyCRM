@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Projektstatus — Samify Group AB</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:#f4f5f7;color:#1a1d27;min-height:100vh}
+.header{background:#09090f;padding:24px 32px;display:flex;align-items:center;gap:16px}
+.logo{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#f0a020}
+.header-sub{color:#6a6a98;font-size:12px;text-transform:uppercase;letter-spacing:2px}
+.wrap{max-width:720px;margin:0 auto;padding:32px 20px}
+.hero{background:#fff;border-radius:14px;padding:28px;margin-bottom:20px;border:1px solid #e2e4e9}
+.company{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;margin-bottom:4px}
+.service{color:#6b7280;font-size:14px;margin-bottom:20px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+.stat{background:#f8f9fb;border-radius:10px;padding:16px;text-align:center}
+.stat-l{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;margin-bottom:4px}
+.stat-v{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:500;color:#1a1d27}
+.prog-wrap{margin-top:16px}
+.prog-lbl{display:flex;justify-content:space-between;font-size:12px;color:#6b7280;margin-bottom:6px}
+.prog{height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden}
+.prog-f{height:100%;background:linear-gradient(to right,#f0a020,#ffc840);border-radius:4px;transition:width .8s ease}
+.steps{display:flex;flex-direction:column;gap:10px}
+.step{display:flex;align-items:center;gap:14px;padding:14px;background:#f8f9fb;border-radius:10px}
+.step-circle{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.step-done{background:#059669;color:#fff}
+.step-active{background:#f0a020;color:#000}
+.step-todo{background:#e5e7eb;color:#9ca3af}
+.card{background:#fff;border-radius:14px;padding:22px;margin-bottom:16px;border:1px solid #e2e4e9}
+.card-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:14px}
+.quote-box{background:#fffbf0;border:1px solid #f0a020;border-radius:10px;padding:18px}
+.quote-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:8px}
+.quote-meta{display:flex;gap:20px;flex-wrap:wrap;margin-top:12px}
+.qm{text-align:center}
+.qm-l{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#9ca3af}
+.qm-v{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:500;color:#f0a020}
+.item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #f3f4f6}
+.item:last-child{border-bottom:none}
+.item-name{font-weight:600;font-size:13.5px}
+.item-desc{font-size:12px;color:#6b7280;margin-top:2px}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-ok{background:#d1fae5;color:#059669}
+.badge-warn{background:#fef3c7;color:#d97706}
+.footer{text-align:center;padding:32px 20px;color:#9ca3af;font-size:12px}
+.loading{text-align:center;padding:80px 20px;color:#9ca3af;font-size:14px}
+@media(max-width:480px){.stats{grid-template-columns:1fr 1fr}.header{padding:16px 20px}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="logo">SAMIFY</div>
+    <div class="header-sub">Projektstatus</div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div id="content" class="loading">
+    <div style="font-size:32px;margin-bottom:12px">⏳</div>
+    Laddar projektstatus...
+  </div>
+</div>
+
+<div class="footer">Samify Group AB · Kalmar · samify.se · Denna sida uppdateras automatiskt</div>
+
+<script>
+const SB_URL = 'https://axypazcbgcogtdqqimvi.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4eXBhemNiZ2NvZ3RkcXFpbXZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MTQzNTQsImV4cCI6MjA5MDM5MDM1NH0.UJmVxHtK1SUWjkiXBO6KlRsAAy4pFo9B32dtnhWGy7E';
+const fmt = n => new Intl.NumberFormat('sv-SE').format(Math.round(n)) + ' kr';
+
+async function sbGet(table, params='') {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`,{headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`}});
+  return r.json();
+}
+
+async function load() {
+  const token = new URLSearchParams(location.search).get('token');
+  const clientName = new URLSearchParams(location.search).get('client');
+  const el = document.getElementById('content');
+
+  let client = null;
+  let quote = null;
+
+  if (token) {
+    const quotes = await sbGet('quotes',`public_token=eq.${token}`);
+    quote = quotes?.[0];
+    if (quote) {
+      const clients = await sbGet('clients',`name=eq.${encodeURIComponent(quote.client_name)}`);
+      client = clients?.[0];
+    }
+  } else if (clientName) {
+    const clients = await sbGet('clients',`name=eq.${encodeURIComponent(clientName)}`);
+    client = clients?.[0];
+  }
+
+  if (!client && !quote) {
+    el.innerHTML = '<div style="text-align:center;padding:60px 20px"><div style="font-size:40px;margin-bottom:12px">🔒</div><div style="font-size:16px;color:#6b7280">Projektstatus hittades inte.<br>Kontakta Samify för hjälp.</div></div>';
+    return;
+  }
+
+  const name = client?.name || quote?.client_name || '—';
+  const ph = client?.project_health || 0;
+  const mrr = client?.mrr || 0;
+  const svc = client?.service || quote?.note || '—';
+  const stages = ['Kartläggning','Prototyp','Driftsättning','Löpande support'];
+  const pcts = [25,50,75,100];
+
+  const stepsHtml = stages.map((s,i)=>{
+    const done = ph >= pcts[i];
+    const cur = ph >= (pcts[i-1]||0) && ph < pcts[i];
+    const cls = done?'step-done':cur?'step-active':'step-todo';
+    return `<div class="step">
+      <div class="step-circle ${cls}">${done?'✓':i+1}</div>
+      <div>
+        <div style="font-size:14px;font-weight:600;color:${done?'#059669':cur?'#f0a020':'#9ca3af'}">${s}</div>
+        <div style="font-size:11.5px;color:#9ca3af">${done?'Slutförd':cur?'Pågår just nu':'Ej påbörjad'}</div>
+      </div>
+      ${cur?'<span class="badge badge-warn" style="margin-left:auto">Aktiv</span>':done?'<span class="badge badge-ok" style="margin-left:auto">✓ Klar</span>':''}
+    </div>`;
+  }).join('');
+
+  let quoteHtml = '';
+  if (quote) {
+    const items = (typeof quote.items==='string'?JSON.parse(quote.items):quote.items)||[];
+    const itemsHtml = items.map(it=>`<div class="item"><div><div class="item-name">${it.name}</div><div class="item-desc">${it.desc||''}</div></div></div>`).join('');
+    quoteHtml = `<div class="card">
+      <div class="card-title">📋 Offert</div>
+      <div class="quote-box">
+        <div class="quote-title">${name}</div>
+        <div style="font-size:13px;color:#6b7280;line-height:1.6">${quote.note||''}</div>
+        ${itemsHtml?`<div style="margin-top:14px">${itemsHtml}</div>`:''}
+        <div class="quote-meta">
+          ${quote.setup_fee?`<div class="qm"><div class="qm-l">Startavgift</div><div class="qm-v">${fmt(quote.setup_fee)}</div></div>`:''}
+          ${quote.monthly_fee?`<div class="qm"><div class="qm-l">Månadsavgift</div><div class="qm-v">${fmt(quote.monthly_fee)}/mån</div></div>`:''}
+          <div class="qm"><div class="qm-l">Totalt (år 1)</div><div class="qm-v">${fmt(quote.total)}</div></div>
+          ${quote.valid_until?`<div class="qm"><div class="qm-l">Giltig till</div><div class="qm-v" style="font-size:14px">${quote.valid_until}</div></div>`:''}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  document.title = `${name} — Samify Projektstatus`;
+
+  el.innerHTML = `
+    <div class="hero">
+      <div class="company">${name}</div>
+      <div class="service">${svc}</div>
+      ${client?`<div class="stats">
+        <div class="stat"><div class="stat-l">Projektstatus</div><div class="stat-v">${ph}%</div></div>
+        <div class="stat"><div class="stat-l">Månadsavgift</div><div class="stat-v" style="font-size:16px">${fmt(mrr)}</div></div>
+        <div class="stat"><div class="stat-l">Kontakt</div><div class="stat-v" style="font-size:15px">${client.contact_name||'—'}</div></div>
+      </div>
+      <div class="prog-wrap">
+        <div class="prog-lbl"><span>Framsteg</span><span>${ph}% genomfört</span></div>
+        <div class="prog"><div class="prog-f" style="width:${ph}%"></div></div>
+      </div>`:''} 
+    </div>
+    ${quoteHtml}
+    ${client?`<div class="card">
+      <div class="card-title">📋 Projektfaser — Samify-metoden</div>
+      <div class="steps">${stepsHtml}</div>
+    </div>`:''}
+    <div class="card" style="text-align:center;background:#09090f;color:#ddddf5">
+      <div style="font-size:13px;color:#6a6a98;margin-bottom:6px">Frågor om projektet?</div>
+      <div style="font-size:15px;font-weight:600">info@samify.se</div>
+    </div>`;
+}
+
+load();
+</script>
+</body>
+</html>
