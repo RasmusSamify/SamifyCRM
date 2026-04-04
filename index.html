@@ -3377,9 +3377,15 @@ function renderScrive() {
 function showSendScriveModal(prefill={}) {
   document.getElementById('modal-body').innerHTML = `
     <div class="modal-title">✍️ Skicka avtal via Scrive</div>
-    <div class="form-group"><label class="form-label">Kund</label>
+    <div style="background:var(--pur2);border:1px solid rgba(139,128,255,.3);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:12.5px;color:var(--dim);line-height:1.6">
+      💡 <b>Kräver en Scrive-mall.</b> Logga in på scrive.com → skapa ett avtalsdokument som mall → kopiera mall-ID:t från URL:en (t.ex. <code style="background:var(--border);padding:1px 5px;border-radius:4px">12345678-abcd-...</code>)
+    </div>
+    <div class="form-group"><label class="form-label">Kund / prospekt</label>
       <input class="form-input" id="sc-cl" list="sc-cl-list" placeholder="Välj kund" value="${prefill.cl||''}">
       <datalist id="sc-cl-list">${clients.map(c=>`<option value="${c.n}"></option>`).join('')}</datalist></div>
+    <div class="form-group"><label class="form-label">Scrive Mall-ID</label>
+      <input class="form-input" id="sc-template" placeholder="t.ex. 12345678-abcd-ef12-3456-789012345678" value="${prefill.templateId||''}">
+      <div style="font-size:11px;color:var(--faint);margin-top:4px">Hittas i URL:en när du öppnar mallen i Scrive</div></div>
     <div class="form-group"><label class="form-label">Avtalstitel</label>
       <input class="form-input" id="sc-title" placeholder="Samify Group AB — Tjänsteavtal 2026" value="${prefill.title||'Samify Group AB — Tjänsteavtal '+new Date().getFullYear()}"></div>
     <div style="display:flex;gap:8px">
@@ -3388,8 +3394,6 @@ function showSendScriveModal(prefill={}) {
       <div class="form-group" style="flex:1"><label class="form-label">E-post</label>
         <input class="form-input" id="sc-email" type="email" placeholder="kontakt@foretag.se" value="${prefill.email||''}"></div>
     </div>
-    <div class="form-group"><label class="form-label">Meddelande till signatären</label>
-      <textarea class="form-input" id="sc-msg" rows="3" style="resize:vertical">Hej!\n\nBifogat finner du vårt tjänsteavtal. Vänligen signera digitalt via länken nedan.\n\nMed vänliga hälsningar\nSamify Group AB</textarea></div>
     <div style="display:flex;gap:8px;margin-top:16px">
       <button class="btn btn-p" style="flex:1" onclick="sendScriveDocument()">✍️ Skicka till Scrive</button>
       <button class="btn btn-g" onclick="closeModal()">Avbryt</button>
@@ -3399,10 +3403,70 @@ function showSendScriveModal(prefill={}) {
   document.getElementById('sc-cl').addEventListener('input', function() {
     const cl = clients.find(c=>c.n===this.value);
     if (cl) {
-      if (cl.ct) document.getElementById('sc-name').value = cl.ct;
+      if (cl.ct)    document.getElementById('sc-name').value  = cl.ct;
       if (cl.email) document.getElementById('sc-email').value = cl.email;
     }
   });
+}
+
+async function sendScriveDocument() {
+  const clName     = document.getElementById('sc-cl').value.trim();
+  const templateId = document.getElementById('sc-template').value.trim();
+  const title      = document.getElementById('sc-title').value.trim();
+  const sigName    = document.getElementById('sc-name').value.trim();
+  const email      = document.getElementById('sc-email').value.trim();
+  if (!clName||!templateId||!sigName||!email) { showToast('⚠️ Fyll i alla fält inkl. mall-ID'); return; }
+  closeModal();
+  showToast('📤 Skapar dokument från mall i Scrive...');
+
+  const client = clients.find(c=>c.n===clName);
+  try {
+    // 1. Skapa från mall
+    const created = await scriveCall('create_from_template', {
+      template_id: templateId, title,
+      signatory_name: sigName, signatory_email: email,
+    });
+    const docId = created.document_id;
+    if (!docId) throw new Error(created.error || 'Inget dokument-ID från Scrive');
+
+    showToast('📤 Startar signeringsprocess...');
+
+    // 2. Starta signering
+    const started = await scriveCall('start', { document_id: docId });
+    const scriveUrl = started.signing_url || `https://scrive.com/s/${docId}`;
+
+    // 3. Spara i Supabase
+    const owner = currentUser?._name || 'Adnan';
+    const rows = await sbPost('scrive_documents', {
+      client_id: client?.id||null, client_name: clName, scrive_id: docId,
+      title, status:'pending', signatory_name:sigName, signatory_email:email,
+      scrive_url: scriveUrl, owner
+    });
+    if (rows?.[0]) scriveDocuments.unshift(mapScriveDocuments([rows[0]])[0]);
+    render();
+
+    // 4. Bekräftelse
+    document.getElementById('modal-body').innerHTML = `
+      <div class="modal-title">✅ Avtal skickat via Scrive!</div>
+      <div style="color:var(--dim);font-size:13px;margin-bottom:16px">Signeringsinbjudan skickad till <b>${sigName}</b> (${email})</div>
+      <div style="background:var(--surf);border-radius:10px;padding:14px;margin-bottom:14px">
+        <div style="font-size:10px;color:var(--faint);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">Signeringslänk</div>
+        <div style="word-break:break-all;font-size:12px"><a href="${scriveUrl}" target="_blank" style="color:var(--pur)">${scriveUrl}</a></div>
+      </div>
+      <div style="background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);border-radius:10px;padding:12px;font-size:12.5px;color:var(--ok);margin-bottom:14px">
+        🔔 Prospektet konverteras automatiskt till aktiv kund när avtalet signas
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-p" onclick="navigator.clipboard.writeText('${scriveUrl}').then(()=>showToast('✓ Länk kopierad!'))">📋 Kopiera länk</button>
+        <button class="btn btn-g" onclick="window.open('${scriveUrl}','_blank')">🔗 Öppna i Scrive</button>
+        <button class="btn btn-g" onclick="closeModal()">Stäng</button>
+      </div>`;
+    document.getElementById('modal').classList.add('show');
+
+  } catch(e) {
+    showToast('⚠️ ' + e.message);
+    console.error('Scrive:', e);
+  }
 }
 
 async function sendScriveDocument() {
