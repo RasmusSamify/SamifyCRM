@@ -396,6 +396,10 @@ body.demo-active .logo-name::after{content:' DEMO';font-size:9px;color:#ff6b35;m
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         Avtal
       </div>
+      <div class="ni" data-m="scrive">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M8 12l2.5 2.5L16 9"/></svg>
+        Scrive <span class="nbadge" id="nb-scrive" style="display:none;background:var(--warn)">0</span>
+      </div>
       <div class="ni" data-m="kost">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         Kostnader <span class="nbadge" id="nb-kost" style="background:var(--pur)">–</span>
@@ -724,6 +728,7 @@ let activityLog = [];
 let reminders   = [];
 let quotes      = [];
 let mrrHistory  = [];
+let scriveDocuments = [];
 
 // ─── DEMO DATA ───────────────────────────────────────────
 const DEMO = {
@@ -830,12 +835,21 @@ function mapQuotes(rows) {
 function mapMrrHistory(rows) {
   return rows.map(r => ({month:r.month, mrr:r.mrr, clients:r.client_count, at:r.recorded_at}));
 }
+function mapScriveDocuments(rows) {
+  return rows.map(r => ({
+    id: r.id, clientId: r.client_id, cl: r.client_name,
+    scriveId: r.scrive_id, title: r.title, status: r.status,
+    sigName: r.signatory_name, email: r.signatory_email,
+    signedAt: r.signed_at, scriveUrl: r.scrive_url,
+    docUrl: r.document_url, owner: r.owner, at: r.created_at
+  }));
+}
 
 async function loadData() {
   showLoading();
   try {
-    const [cl, inv, con, pip, exp, te, al, rem, qt, mh] = await Promise.all([
-      sbGet('clients', 'order=client_status.asc,mrr.desc'), // prospects first, then active by MRR
+    const [cl, inv, con, pip, exp, te, al, rem, qt, mh, sc] = await Promise.all([
+      sbGet('clients', 'order=client_status.asc,mrr.desc'),
       sbGet('invoices', 'order=due_date.asc'),
       sbGet('contracts', 'order=end_date.asc'),
       sbGet('pipeline', 'order=created_at.desc'),
@@ -845,17 +859,19 @@ async function loadData() {
       sbGet('reminders', 'order=due_date.asc'),
       sbGet('quotes', 'order=created_at.desc'),
       sbGet('mrr_history', 'order=month.asc'),
+      sbGet('scrive_documents', 'order=created_at.desc'),
     ]);
-    clients     = mapClients(cl);
-    invoices    = mapInvoices(inv);
-    contracts   = mapContracts(con);
-    pipeline    = mapPipeline(pip);
-    expenses    = mapExpenses(exp);
-    timeEntries = mapTimeEntries(te);
-    activityLog = mapActivityLog(al);
-    reminders   = mapReminders(Array.isArray(rem)?rem:[]);
-    quotes      = mapQuotes(Array.isArray(qt)?qt:[]);
-    mrrHistory  = mapMrrHistory(Array.isArray(mh)?mh:[]);
+    clients         = mapClients(cl);
+    invoices        = mapInvoices(inv);
+    contracts       = mapContracts(con);
+    pipeline        = mapPipeline(pip);
+    expenses        = mapExpenses(exp);
+    timeEntries     = mapTimeEntries(te);
+    activityLog     = mapActivityLog(al);
+    reminders       = mapReminders(Array.isArray(rem)?rem:[]);
+    quotes          = mapQuotes(Array.isArray(qt)?qt:[]);
+    mrrHistory      = mapMrrHistory(Array.isArray(mh)?mh:[]);
+    scriveDocuments = mapScriveDocuments(Array.isArray(sc)?sc:[]);
     autoSnapshotMRR();
   } catch(e) {
     console.error('Supabase load error:', e);
@@ -939,7 +955,7 @@ const S = {
   dragging: false,
 };
 
-const titles = {dash:'Dashboard',fakt:'Fakturor',avtal:'Avtal & Kontrakt',kund:'Kunder',pipe:'Pipeline',kal:'Kalender',kost:'Kostnader & Abonnemang',offert:'Offerter',pam:'Påminnelser',mrr:'MRR-historik'};
+const titles = {dash:'Dashboard',fakt:'Fakturor',avtal:'Avtal & Kontrakt',kund:'Kunder',pipe:'Pipeline',kal:'Kalender',kost:'Kostnader & Abonnemang',offert:'Offerter',pam:'Påminnelser',mrr:'MRR-historik',scrive:'Scrive — E-signering'};
 
 let aiExpenseSuggestions = [];
 
@@ -995,6 +1011,7 @@ function render() {
   else if (m==='offert') ct.innerHTML = renderOffert();
   else if (m==='pam') ct.innerHTML = renderPam();
   else if (m==='mrr') ct.innerHTML = renderMRRHistory();
+  else if (m==='scrive') ct.innerHTML = renderScrive();
   afterRender(m);
   updateBadges();
 }
@@ -1022,6 +1039,8 @@ function updateBadges() {
   if (nbk) { const t=expenses.filter(e=>e.st==='active'&&e.expType!=='onetime').reduce((a,e)=>a+e.amSEK,0); nbk.textContent=t>0?fmtSEK(t):'0'; }
   const nbo = document.getElementById('nb-offert');
   if (nbo) { const cnt=quotes.filter(q=>q.st==='sent').length; nbo.textContent=cnt; nbo.style.display=cnt>0?'':'none'; }
+  const nbsc = document.getElementById('nb-scrive');
+  if (nbsc) { const cnt=scriveDocuments.filter(d=>d.status==='pending').length; nbsc.textContent=cnt; nbsc.style.display=cnt>0?'':'none'; }
   const nbp = document.getElementById('nb-pam');
   if (nbp) { const cnt=reminders.filter(r=>!r.done&&new Date(r.due)<=new Date()).length; nbp.textContent=cnt; nbp.style.display=cnt>0?'':'none'; }
 }
@@ -3283,6 +3302,213 @@ function generateMonthlyReport() {
 // ═══════════════════════════════════════════════════════
 //  MRR auto-snapshot helper (called in autoSnapshotMRR)
 // ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+//  ✍️ SCRIVE — E-SIGNERING
+// ═══════════════════════════════════════════════════════
+const SCRIVE_PROXY = `${SB_URL}/functions/v1/scrive-proxy`;
+
+async function scriveCall(action, payload={}) {
+  const r = await fetch(SCRIVE_PROXY, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({action, payload})
+  });
+  const data = await r.json();
+  if (data.error) throw new Error(data.error);
+  return data;
+}
+
+function renderScrive() {
+  const pending = scriveDocuments.filter(d=>d.status==='pending');
+  const signed  = scriveDocuments.filter(d=>d.status==='signed');
+  const others  = scriveDocuments.filter(d=>!['pending','signed'].includes(d.status));
+
+  const stBdg = s => ({
+    draft:    '<span class="bdg bdg-neu">Utkast</span>',
+    pending:  '<span class="bdg bdg-warn">⏳ Väntar</span>',
+    signed:   '<span class="bdg bdg-ok">✅ Signerat</span>',
+    rejected: '<span class="bdg bdg-err">Avböjt</span>',
+    cancelled:'<span class="bdg bdg-neu">Avbrutet</span>',
+  }[s]||s);
+
+  const makeRow = d => `<tr>
+    <td><b>${d.cl}</b></td>
+    <td style="font-size:12.5px">${d.title}</td>
+    <td>${d.sigName||'—'}<br><span style="font-size:11px;color:var(--faint)">${d.email||''}</span></td>
+    <td>${stBdg(d.status)}</td>
+    <td style="font-family:'JetBrains Mono',monospace;font-size:11.5px">${d.signedAt?new Date(d.signedAt).toLocaleDateString('sv-SE'):d.at?.slice(0,10)||'—'}</td>
+    <td style="display:flex;gap:4px;flex-wrap:wrap">
+      ${d.scriveUrl&&d.status==='pending'?`<button class="btn btn-pur btn-sm" onclick="window.open('${d.scriveUrl}','_blank')">🔗 Länk</button>`:''}
+      ${d.docUrl?`<button class="btn btn-g btn-sm" onclick="window.open('${d.docUrl}','_blank')">📄 PDF</button>`:''}
+      <button class="btn btn-g btn-sm" onclick="refreshScriveStatus('${d.id}','${d.scriveId||''}')">↻</button>
+      <button class="btn btn-g btn-sm" onclick="deleteScriveDoc('${d.id}')">✕</button>
+    </td>
+  </tr>`;
+
+  const allRows = [...pending,...signed,...others].map(makeRow).join('');
+
+  if (!scriveDocuments.length) return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;gap:16px;text-align:center">
+    <div style="font-size:40px;opacity:.3">✍️</div>
+    <div style="font-family:'Montserrat',sans-serif;font-size:18px;font-weight:700">Inga avtal skickade ännu</div>
+    <div style="color:var(--dim);font-size:13px;max-width:340px">Skicka ett avtal via Scrive — kunden signerar digitalt och CRM:et uppdateras automatiskt</div>
+    <button class="btn btn-p" onclick="showSendScriveModal()">✍️ Skicka första avtalet</button>
+  </div>`;
+
+  return `
+    <div class="sgrid" style="margin-bottom:18px">
+      <div class="scard c-warn"><div class="slabel">Väntar på signering</div><div class="sval">${pending.length}</div></div>
+      <div class="scard c-ok"><div class="slabel">Signerade</div><div class="sval">${signed.length}</div></div>
+      <div class="scard c-acc"><div class="slabel">Totalt skickade</div><div class="sval">${scriveDocuments.length}</div></div>
+      <div class="scard c-pur"><div class="slabel">Konverteringsgrad</div><div class="sval">${scriveDocuments.length?Math.round(signed.length/scriveDocuments.length*100):0}%</div></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:13px;color:var(--dim)">${pending.length} avtal väntar på signering</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-g btn-sm" onclick="refreshAllScrive()">↻ Uppdatera alla</button>
+        <button class="btn btn-p btn-sm" onclick="showSendScriveModal()">✍️ Skicka avtal</button>
+      </div>
+    </div>
+    <div class="card"><div style="overflow-x:auto"><table class="tbl">
+      <thead><tr><th>Kund</th><th>Titel</th><th>Signatär</th><th>Status</th><th>Datum</th><th>Åtgärd</th></tr></thead>
+      <tbody>${allRows}</tbody>
+    </table></div></div>`;
+}
+
+function showSendScriveModal(prefill={}) {
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-title">✍️ Skicka avtal via Scrive</div>
+    <div class="form-group"><label class="form-label">Kund</label>
+      <input class="form-input" id="sc-cl" list="sc-cl-list" placeholder="Välj kund" value="${prefill.cl||''}">
+      <datalist id="sc-cl-list">${clients.map(c=>`<option value="${c.n}"></option>`).join('')}</datalist></div>
+    <div class="form-group"><label class="form-label">Avtalstitel</label>
+      <input class="form-input" id="sc-title" placeholder="Samify Group AB — Tjänsteavtal 2026" value="${prefill.title||'Samify Group AB — Tjänsteavtal '+new Date().getFullYear()}"></div>
+    <div style="display:flex;gap:8px">
+      <div class="form-group" style="flex:1"><label class="form-label">Signatärens namn</label>
+        <input class="form-input" id="sc-name" placeholder="Förnamn Efternamn" value="${prefill.name||''}"></div>
+      <div class="form-group" style="flex:1"><label class="form-label">E-post</label>
+        <input class="form-input" id="sc-email" type="email" placeholder="kontakt@foretag.se" value="${prefill.email||''}"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Meddelande till signatären</label>
+      <textarea class="form-input" id="sc-msg" rows="3" style="resize:vertical">Hej!\n\nBifogat finner du vårt tjänsteavtal. Vänligen signera digitalt via länken nedan.\n\nMed vänliga hälsningar\nSamify Group AB</textarea></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-p" style="flex:1" onclick="sendScriveDocument()">✍️ Skicka till Scrive</button>
+      <button class="btn btn-g" onclick="closeModal()">Avbryt</button>
+    </div>`;
+  document.getElementById('modal').classList.add('show');
+  // Auto-fill contact from client
+  document.getElementById('sc-cl').addEventListener('input', function() {
+    const cl = clients.find(c=>c.n===this.value);
+    if (cl) {
+      if (cl.ct) document.getElementById('sc-name').value = cl.ct;
+      if (cl.email) document.getElementById('sc-email').value = cl.email;
+    }
+  });
+}
+
+async function sendScriveDocument() {
+  const clName  = document.getElementById('sc-cl').value.trim();
+  const title   = document.getElementById('sc-title').value.trim();
+  const sigName = document.getElementById('sc-name').value.trim();
+  const email   = document.getElementById('sc-email').value.trim();
+  if (!clName||!title||!sigName||!email) { showToast('⚠️ Fyll i alla fält'); return; }
+  closeModal();
+  showToast('📤 Skapar dokument i Scrive...');
+
+  const client = clients.find(c=>c.n===clName);
+  try {
+    // 1. Skapa dokument via edge function
+    const created = await scriveCall('create', {
+      title,
+      signatory_name: sigName,
+      signatory_email: email,
+    });
+    const docId = created.document_id;
+    if (!docId) throw new Error('Inget dokument-ID från Scrive');
+
+    showToast('📤 Startar signeringsprocess...');
+
+    // 2. Starta signering
+    const started = await scriveCall('start', { document_id: docId });
+    const scriveUrl = started.signing_url || `https://scrive.com/s/${docId}`;
+
+    // 3. Spara i Supabase
+    const owner = currentUser?._name || 'Adnan';
+    const rows = await sbPost('scrive_documents', {
+      client_id: client?.id||null, client_name: clName, scrive_id: docId,
+      title, status:'pending', signatory_name:sigName, signatory_email:email,
+      scrive_url:scriveUrl, owner
+    });
+    if (rows?.[0]) scriveDocuments.unshift(mapScriveDocuments([rows[0]])[0]);
+    render();
+
+    // 4. Visa bekräftelse
+    document.getElementById('modal-body').innerHTML = `
+      <div class="modal-title">✅ Avtal skickat via Scrive!</div>
+      <div style="color:var(--dim);font-size:13px;margin-bottom:16px">Skickat till <b>${sigName}</b> (${email})</div>
+      <div style="background:var(--surf);border-radius:10px;padding:14px;margin-bottom:16px">
+        <div style="font-size:10px;color:var(--faint);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">Signeringslänk</div>
+        <div style="word-break:break-all;font-size:12px"><a href="${scriveUrl}" target="_blank" style="color:var(--pur)">${scriveUrl}</a></div>
+      </div>
+      <div style="background:var(--ok);background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);border-radius:10px;padding:12px;font-size:12.5px;color:var(--ok);margin-bottom:14px">
+        🔔 CRM:et konverterar automatiskt prospektet till aktiv kund när avtalet är signerat
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-p" onclick="navigator.clipboard.writeText('${scriveUrl}').then(()=>showToast('✓ Länk kopierad!'))">📋 Kopiera länk</button>
+        <button class="btn btn-g" onclick="window.open('${scriveUrl}','_blank')">🔗 Öppna i Scrive</button>
+        <button class="btn btn-g" onclick="closeModal()">Stäng</button>
+      </div>`;
+    document.getElementById('modal').classList.add('show');
+
+  } catch(e) {
+    showToast('⚠️ Scrive-fel: ' + e.message);
+    console.error('Scrive error:', e);
+  }
+}
+
+async function refreshScriveStatus(localId, scriveId) {
+  if (!scriveId) { showToast('⚠️ Inget Scrive-ID'); return; }
+  try {
+    const res = await scriveCall('status', { document_id: scriveId });
+    const doc = res.document;
+    // Scrive status: preparation, pending, closed, canceled, timedout, rejected
+    const statusMap = { closed:'signed', canceled:'cancelled', timedout:'expired', rejected:'rejected' };
+    const status = statusMap[doc?.status] || 'pending';
+    const signedAt = status==='signed' ? new Date().toISOString() : null;
+    const docUrl = null; // hämtas separat via Scrive UI
+
+    await sbPatch('scrive_documents', localId, {
+      status, signed_at: signedAt, updated_at: new Date().toISOString()
+    });
+    const local = scriveDocuments.find(d=>d.id===localId);
+    if (local) { local.status=status; if(signedAt) local.signedAt=signedAt; }
+
+    // Auto-konvertera prospect om signerat
+    if (status==='signed' && local?.clientId) {
+      const cl = clients.find(c=>c.id===local.clientId);
+      if (cl?.status==='prospect') {
+        showToast('🏆 Signerat! Konverterar prospekt till kund...');
+        setTimeout(()=>convertToClient(local.clientId), 800);
+        return;
+      }
+    }
+    render();
+    showToast(status==='signed'?'🎉 Avtalet är signerat!':status==='pending'?'⏳ Väntar fortfarande på signering':`Status: ${status}`);
+  } catch(e) { showToast('⚠️ ' + e.message); }
+}
+
+async function refreshAllScrive() {
+  const pending = scriveDocuments.filter(d=>d.status==='pending'&&d.scriveId);
+  if (!pending.length) { showToast('Inga väntande dokument'); return; }
+  showToast(`↻ Uppdaterar ${pending.length} dokument...`);
+  for (const d of pending) await refreshScriveStatus(d.id, d.scriveId);
+}
+
+async function deleteScriveDoc(id) {
+  if (!confirm('Ta bort från CRM? Påverkar inte Scrive.')) return;
+  scriveDocuments = scriveDocuments.filter(d=>d.id!==id);
+  render(); await sbDelete('scrive_documents', id);
+}
+
 document.querySelectorAll('.ni').forEach(el => {
   el.addEventListener('click', () => go(el.dataset.m));
 });
