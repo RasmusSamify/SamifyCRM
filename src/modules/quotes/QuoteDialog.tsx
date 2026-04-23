@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Mail } from 'lucide-react'
 import { Dialog } from '@/components/ui/Dialog'
 import { Input, Textarea, Field } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
 import { useUpsertQuote, useDeleteQuote } from './queries'
+import { scheduleFollowupReminders } from './coachQueries'
+import { SalesCoachSection } from './SalesCoachSection'
+import { FollowupEmailDialog } from './FollowupEmailDialog'
 import { toast } from '@/stores/toast'
 import { formatSEK } from '@/lib/format'
 import type { Quote, Json } from '@/types/database'
@@ -59,6 +62,7 @@ export function QuoteDialog({ open, onClose, initial }: QuoteDialogProps) {
   const [status, setStatus] = useState('draft')
   const [note, setNote] = useState('')
   const [items, setItems] = useState<QuoteItem[]>([])
+  const [emailOpen, setEmailOpen] = useState(false)
 
   const upsert = useUpsertQuote()
   const del = useDeleteQuote()
@@ -96,7 +100,7 @@ export function QuoteDialog({ open, onClose, initial }: QuoteDialogProps) {
     }
     const cleanItems = items.filter((it) => it.name.trim())
     try {
-      await upsert.mutateAsync({
+      const saved = await upsert.mutateAsync({
         ...(initial?.id ? { id: initial.id } : {}),
         client_name: clientName.trim(),
         contact_name: contactName || null,
@@ -112,7 +116,26 @@ export function QuoteDialog({ open, onClose, initial }: QuoteDialogProps) {
           ? {}
           : { public_token: generatePublicToken() }),
       })
-      toast.success(initial ? 'Offert uppdaterad' : 'Offert skapad')
+
+      /* When a quote transitions to 'sent', auto-schedule follow-up
+         reminders (+3d, valid_until-1, valid_until). Idempotent. */
+      const transitionedToSent =
+        status === 'sent' && initial?.status !== 'sent' && saved
+      if (transitionedToSent) {
+        try {
+          const added = await scheduleFollowupReminders(saved as Quote)
+          toast.success(
+            initial ? 'Offert uppdaterad' : 'Offert skapad',
+            added > 0
+              ? `${added} uppföljning${added === 1 ? '' : 'ar'} automatiskt schemalagda.`
+              : undefined,
+          )
+        } catch {
+          toast.success(initial ? 'Offert uppdaterad' : 'Offert skapad')
+        }
+      } else {
+        toast.success(initial ? 'Offert uppdaterad' : 'Offert skapad')
+      }
       onClose()
     } catch (err) {
       toast.error('Något gick fel', err instanceof Error ? err.message : undefined)
@@ -142,6 +165,16 @@ export function QuoteDialog({ open, onClose, initial }: QuoteDialogProps) {
           {initial && (
             <Button variant="ghost" onClick={handleDelete} className="text-[var(--color-danger)] mr-auto">
               Ta bort
+            </Button>
+          )}
+          {initial && (
+            <Button
+              variant="secondary"
+              onClick={() => setEmailOpen(true)}
+              disabled={!initial}
+            >
+              <Mail size={13} />
+              Föreslå uppföljningsmejl
             </Button>
           )}
           <Button variant="ghost" onClick={onClose}>
@@ -253,7 +286,19 @@ export function QuoteDialog({ open, onClose, initial }: QuoteDialogProps) {
             {formatSEK(yearOneTotal)}
           </span>
         </div>
+
+        {/* AI sales coach — only for existing quotes */}
+        {initial && <SalesCoachSection quote={initial} />}
       </form>
+
+      {/* Follow-up email draft modal */}
+      {initial && (
+        <FollowupEmailDialog
+          open={emailOpen}
+          onClose={() => setEmailOpen(false)}
+          quote={initial}
+        />
+      )}
     </Dialog>
   )
 }
