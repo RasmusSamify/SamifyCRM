@@ -1,15 +1,19 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
-import { Mail, Lock, Loader2, ArrowRight } from 'lucide-react'
-import { signIn, useAuth } from '@/hooks/useAuth'
+import { Mail, Lock, Loader2, ArrowRight, CheckCircle2 } from 'lucide-react'
+import { signIn, signUp, useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/cn'
 
+type Mode = 'signin' | 'signup'
+
 export function LoginPage() {
   const { isAuthenticated, loading } = useAuth()
+  const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [info, setInfo] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   if (loading) {
@@ -24,14 +28,37 @@ export function LoginPage() {
     return <Navigate to="/" replace />
   }
 
+  const switchMode = (next: Mode) => {
+    setMode(next)
+    setError(null)
+    setInfo(null)
+  }
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError(null)
+    setInfo(null)
     setSubmitting(true)
-    const { error } = await signIn(email, password)
-    setSubmitting(false)
-    if (error) {
-      setError(mapError(error.message))
+    if (mode === 'signin') {
+      const { error } = await signIn(email, password)
+      setSubmitting(false)
+      if (error) setError(mapError(error.message))
+    } else {
+      if (password.length < 6) {
+        setSubmitting(false)
+        setError('Lösenordet måste vara minst 6 tecken.')
+        return
+      }
+      const { data, error } = await signUp(email, password)
+      setSubmitting(false)
+      if (error) {
+        setError(mapError(error.message))
+      } else if (data.session) {
+        /* auto-signed in */
+      } else {
+        setInfo('Konto skapat! Kolla din e-post för bekräftelselänk och logga sedan in.')
+        setMode('signin')
+      }
     }
   }
 
@@ -59,7 +86,9 @@ export function LoginPage() {
             </span>
           </div>
           <p className="text-[14px] text-[var(--fg-muted)]">
-            Välkommen tillbaka. Logga in för att fortsätta.
+            {mode === 'signin'
+              ? 'Välkommen tillbaka. Logga in för att fortsätta.'
+              : 'Skapa ett konto för att komma igång.'}
           </p>
         </div>
 
@@ -68,6 +97,16 @@ export function LoginPage() {
           onSubmit={handleSubmit}
           className="surface-glow bg-[var(--surface)]/95 border border-[var(--border)] rounded-[18px] p-8 backdrop-blur-xl shadow-[0_24px_60px_-16px_rgb(0_0_0_/_0.55)]"
         >
+          {/* Mode tabs */}
+          <div className="mb-5 flex items-center gap-1 p-1 rounded-[10px] bg-[var(--bg)] border border-[var(--border)]">
+            <ModeTab active={mode === 'signin'} onClick={() => switchMode('signin')}>
+              Logga in
+            </ModeTab>
+            <ModeTab active={mode === 'signup'} onClick={() => switchMode('signup')}>
+              Skapa konto
+            </ModeTab>
+          </div>
+
           <div className="space-y-4">
             <Field
               label="E-post"
@@ -85,10 +124,17 @@ export function LoginPage() {
               type="password"
               value={password}
               onChange={setPassword}
-              placeholder="••••••••"
-              autoComplete="current-password"
+              placeholder={mode === 'signup' ? 'Minst 6 tecken' : '••••••••'}
+              autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
             />
           </div>
+
+          {info && (
+            <div className="mt-4 px-3 py-2.5 rounded-[8px] border border-[color-mix(in_oklch,var(--color-success)_30%,transparent)] bg-[color-mix(in_oklch,var(--color-success)_10%,transparent)] text-[12.5px] text-[var(--color-success)] flex items-start gap-2">
+              <CheckCircle2 size={14} className="mt-0.5 shrink-0" />
+              <span>{info}</span>
+            </div>
+          )}
 
           {error && (
             <div className="mt-4 px-3 py-2 rounded-[8px] border border-[color-mix(in_oklch,var(--color-danger)_30%,transparent)] bg-[color-mix(in_oklch,var(--color-danger)_10%,transparent)] text-[12.5px] text-[var(--color-danger)]">
@@ -107,7 +153,7 @@ export function LoginPage() {
               <Loader2 size={16} className="animate-spin" />
             ) : (
               <>
-                Logga in
+                {mode === 'signin' ? 'Logga in' : 'Skapa konto'}
                 <ArrowRight size={15} />
               </>
             )}
@@ -119,6 +165,31 @@ export function LoginPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+function ModeTab({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex-1 h-8 rounded-[7px] text-[12.5px] font-medium transition-all',
+        active
+          ? 'bg-[var(--surface-2)] text-[var(--fg)] shadow-[inset_0_0_0_1px_var(--border)]'
+          : 'text-[var(--fg-muted)] hover:text-[var(--fg)]',
+      )}
+    >
+      {children}
+    </button>
   )
 }
 
