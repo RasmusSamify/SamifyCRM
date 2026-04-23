@@ -4,6 +4,7 @@ import { Input, Textarea, Field } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
 import { useUpsertExpense, useDeleteExpense } from './queries'
+import type { ExtractedInvoice } from './parseQueries'
 import { toast } from '@/stores/toast'
 import type { Expense } from '@/types/database'
 
@@ -11,6 +12,7 @@ interface ExpenseDialogProps {
   open: boolean
   onClose: () => void
   initial?: Expense | null
+  prefill?: ExtractedInvoice | null
 }
 
 const CATEGORIES = [
@@ -33,7 +35,7 @@ const TYPES = [
   { value: 'onetime', label: 'Engångsutgift' },
 ]
 
-export function ExpenseDialog({ open, onClose, initial }: ExpenseDialogProps) {
+export function ExpenseDialog({ open, onClose, initial, prefill }: ExpenseDialogProps) {
   const [name, setName] = useState('')
   const [category, setCategory] = useState('Mjukvara')
   const [amountSek, setAmountSek] = useState('0')
@@ -52,6 +54,26 @@ export function ExpenseDialog({ open, onClose, initial }: ExpenseDialogProps) {
 
   useEffect(() => {
     if (!open) return
+    if (prefill) {
+      /* Pre-fill from AI-extracted invoice (new expense) */
+      setName(prefill.vendor || '')
+      setCategory(prefill.suggested_category || 'Mjukvara')
+      setAmountSek(String(prefill.amount_sek || prefill.amount_original || 0))
+      setAmountOriginal(
+        prefill.currency !== 'SEK' && prefill.amount_original ? String(prefill.amount_original) : '',
+      )
+      setCurrency(prefill.currency || 'SEK')
+      setExpenseType(prefill.is_recurring ? 'recurring' : 'onetime')
+      setBillingCycle(prefill.billing_cycle ?? 'monthly')
+      setNextDate('')
+      setExpenseMonth(prefill.date ? prefill.date.slice(0, 7) : '')
+      setNote(
+        [prefill.description, prefill.notes].filter(Boolean).join('\n\n') || '',
+      )
+      setUrl(prefill.url ?? '')
+      setStatus('active')
+      return
+    }
     setName(initial?.name ?? '')
     setCategory(initial?.category ?? 'Mjukvara')
     setAmountSek(String(initial?.amount_sek ?? 0))
@@ -64,7 +86,7 @@ export function ExpenseDialog({ open, onClose, initial }: ExpenseDialogProps) {
     setNote(initial?.note ?? '')
     setUrl(initial?.url ?? '')
     setStatus(initial?.status ?? 'active')
-  }, [open, initial])
+  }, [open, initial, prefill])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Plus, Wallet, Search, TrendingUp } from 'lucide-react'
+import { Plus, Wallet, Search, TrendingUp, Sparkles } from 'lucide-react'
 import { PageShell } from '@/components/layout/PageShell'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -11,6 +11,8 @@ import { StatCard } from '@/components/ui/StatCard'
 import { formatDate, formatSEK } from '@/lib/format'
 import { useExpenses } from './queries'
 import { ExpenseDialog } from './ExpenseDialog'
+import { ParseInvoiceDialog } from './ParseInvoiceDialog'
+import type { ExtractedInvoice } from './parseQueries'
 import type { Expense } from '@/types/database'
 
 function monthlyEquivalent(e: Expense) {
@@ -31,6 +33,8 @@ export function ExpensesPage() {
   const [typeFilter, setTypeFilter] = useState('all')
   const [editing, setEditing] = useState<Expense | null>(null)
   const [creating, setCreating] = useState(false)
+  const [parsing, setParsing] = useState(false)
+  const [prefill, setPrefill] = useState<ExtractedInvoice | null>(null)
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -121,10 +125,16 @@ export function ExpensesPage() {
       title="Kostnader & Abonnemang"
       subtitle={expenses ? `${expenses.length} poster` : undefined}
       action={
-        <Button size="sm" onClick={() => setCreating(true)}>
-          <Plus size={14} />
-          Ny kostnad
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="secondary" onClick={() => setParsing(true)}>
+            <Sparkles size={14} />
+            Parsa faktura
+          </Button>
+          <Button size="sm" onClick={() => setCreating(true)}>
+            <Plus size={14} />
+            Ny kostnad
+          </Button>
+        </div>
       }
     >
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
@@ -190,8 +200,23 @@ export function ExpensesPage() {
         }
       />
 
-      <ExpenseDialog open={creating} onClose={() => setCreating(false)} />
+      <ExpenseDialog
+        open={creating}
+        onClose={() => {
+          setCreating(false)
+          setPrefill(null)
+        }}
+        prefill={prefill}
+      />
       <ExpenseDialog open={!!editing} onClose={() => setEditing(null)} initial={editing} />
+      <ParseInvoiceDialog
+        open={parsing}
+        onClose={() => setParsing(false)}
+        onExtracted={(extracted) => {
+          setPrefill(extracted)
+          setCreating(true)
+        }}
+      />
     </PageShell>
   )
 }
