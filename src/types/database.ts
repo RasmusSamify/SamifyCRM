@@ -14,6 +14,7 @@ export type Database = {
     Tables: {
       activity_log: {
         Row: {
+          client_id: string | null
           client_name: string | null
           content: string
           created_at: string | null
@@ -23,6 +24,7 @@ export type Database = {
           type: string
         }
         Insert: {
+          client_id?: string | null
           client_name?: string | null
           content: string
           created_at?: string | null
@@ -32,6 +34,7 @@ export type Database = {
           type?: string
         }
         Update: {
+          client_id?: string | null
           client_name?: string | null
           content?: string
           created_at?: string | null
@@ -40,7 +43,15 @@ export type Database = {
           owner?: string | null
           type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: 'activity_log_client_id_fkey'
+            columns: ['client_id']
+            isOneToOne: false
+            referencedRelation: 'clients'
+            referencedColumns: ['id']
+          },
+        ]
       }
       clients: {
         Row: {
@@ -114,6 +125,7 @@ export type Database = {
       contracts: {
         Row: {
           binding_months: number | null
+          client_id: string | null
           client_name: string
           created_at: string | null
           end_date: string
@@ -126,6 +138,7 @@ export type Database = {
         }
         Insert: {
           binding_months?: number | null
+          client_id?: string | null
           client_name: string
           created_at?: string | null
           end_date: string
@@ -138,6 +151,7 @@ export type Database = {
         }
         Update: {
           binding_months?: number | null
+          client_id?: string | null
           client_name?: string
           created_at?: string | null
           end_date?: string
@@ -148,7 +162,15 @@ export type Database = {
           start_date?: string
           total_value?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: 'contracts_client_id_fkey'
+            columns: ['client_id']
+            isOneToOne: false
+            referencedRelation: 'clients'
+            referencedColumns: ['id']
+          },
+        ]
       }
       expenses: {
         Row: {
@@ -156,6 +178,7 @@ export type Database = {
           amount_sek: number
           billing_cycle: string | null
           category: string
+          client_id: string | null
           created_at: string | null
           currency: string | null
           expense_month: string | null
@@ -172,6 +195,7 @@ export type Database = {
           amount_sek: number
           billing_cycle?: string | null
           category: string
+          client_id?: string | null
           created_at?: string | null
           currency?: string | null
           expense_month?: string | null
@@ -188,6 +212,7 @@ export type Database = {
           amount_sek?: number
           billing_cycle?: string | null
           category?: string
+          client_id?: string | null
           created_at?: string | null
           currency?: string | null
           expense_month?: string | null
@@ -199,12 +224,21 @@ export type Database = {
           status?: string | null
           url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: 'expenses_client_id_fkey'
+            columns: ['client_id']
+            isOneToOne: false
+            referencedRelation: 'clients'
+            referencedColumns: ['id']
+          },
+        ]
       }
       invoices: {
         Row: {
           amount: number
           category: string | null
+          client_id: string | null
           client_name: string
           created_at: string | null
           due_date: string
@@ -215,6 +249,7 @@ export type Database = {
         Insert: {
           amount: number
           category?: string | null
+          client_id?: string | null
           client_name: string
           created_at?: string | null
           due_date: string
@@ -225,6 +260,7 @@ export type Database = {
         Update: {
           amount?: number
           category?: string | null
+          client_id?: string | null
           client_name?: string
           created_at?: string | null
           due_date?: string
@@ -232,7 +268,15 @@ export type Database = {
           reminder_sent_at?: string | null
           status?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: 'invoices_client_id_fkey'
+            columns: ['client_id']
+            isOneToOne: false
+            referencedRelation: 'clients'
+            referencedColumns: ['id']
+          },
+        ]
       }
       mrr_history: {
         Row: {
@@ -304,6 +348,7 @@ export type Database = {
       }
       quotes: {
         Row: {
+          client_id: string | null
           client_name: string
           contact_email: string | null
           contact_name: string | null
@@ -320,6 +365,7 @@ export type Database = {
           valid_until: string | null
         }
         Insert: {
+          client_id?: string | null
           client_name: string
           contact_email?: string | null
           contact_name?: string | null
@@ -336,6 +382,7 @@ export type Database = {
           valid_until?: string | null
         }
         Update: {
+          client_id?: string | null
           client_name?: string
           contact_email?: string | null
           contact_name?: string | null
@@ -351,10 +398,19 @@ export type Database = {
           total?: number | null
           valid_until?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: 'quotes_client_id_fkey'
+            columns: ['client_id']
+            isOneToOne: false
+            referencedRelation: 'clients'
+            referencedColumns: ['id']
+          },
+        ]
       }
       reminders: {
         Row: {
+          client_id: string | null
           client_name: string | null
           created_at: string | null
           deal_company: string | null
@@ -365,6 +421,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          client_id?: string | null
           client_name?: string | null
           created_at?: string | null
           deal_company?: string | null
@@ -375,6 +432,7 @@ export type Database = {
           title: string
         }
         Update: {
+          client_id?: string | null
           client_name?: string | null
           created_at?: string | null
           deal_company?: string | null
@@ -384,7 +442,15 @@ export type Database = {
           owner?: string | null
           title?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: 'reminders_client_id_fkey'
+            columns: ['client_id']
+            isOneToOne: false
+            referencedRelation: 'clients'
+            referencedColumns: ['id']
+          },
+        ]
       }
       scrive_documents: {
         Row: {
@@ -445,8 +511,83 @@ export type Database = {
           },
         ]
       }
+      tech_repos: {
+        Row: {
+          architecture: string | null
+          client_id: string | null
+          created_at: string | null
+          description: string | null
+          flags: Json | null
+          github_owner: string
+          has_cicd: boolean | null
+          has_tests: boolean | null
+          has_typescript: boolean | null
+          host: string | null
+          id: string
+          key_dependencies: Json | null
+          last_synced_at: string | null
+          narrative: string | null
+          primary_language: string | null
+          repo_name: string
+          stack: Json | null
+          suggestions: Json | null
+          summary: string | null
+        }
+        Insert: {
+          architecture?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          flags?: Json | null
+          github_owner: string
+          has_cicd?: boolean | null
+          has_tests?: boolean | null
+          has_typescript?: boolean | null
+          host?: string | null
+          id?: string
+          key_dependencies?: Json | null
+          last_synced_at?: string | null
+          narrative?: string | null
+          primary_language?: string | null
+          repo_name: string
+          stack?: Json | null
+          suggestions?: Json | null
+          summary?: string | null
+        }
+        Update: {
+          architecture?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          flags?: Json | null
+          github_owner?: string
+          has_cicd?: boolean | null
+          has_tests?: boolean | null
+          has_typescript?: boolean | null
+          host?: string | null
+          id?: string
+          key_dependencies?: Json | null
+          last_synced_at?: string | null
+          narrative?: string | null
+          primary_language?: string | null
+          repo_name?: string
+          stack?: Json | null
+          suggestions?: Json | null
+          summary?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'tech_repos_client_id_fkey'
+            columns: ['client_id']
+            isOneToOne: false
+            referencedRelation: 'clients'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       time_entries: {
         Row: {
+          client_id: string | null
           client_name: string
           created_at: string | null
           date: string
@@ -456,6 +597,7 @@ export type Database = {
           owner: string | null
         }
         Insert: {
+          client_id?: string | null
           client_name: string
           created_at?: string | null
           date?: string
@@ -465,6 +607,7 @@ export type Database = {
           owner?: string | null
         }
         Update: {
+          client_id?: string | null
           client_name?: string
           created_at?: string | null
           date?: string
@@ -473,75 +616,9 @@ export type Database = {
           id?: string
           owner?: string | null
         }
-        Relationships: []
-      }
-      tech_repos: {
-        Row: {
-          architecture: string | null
-          client_id: string | null
-          created_at: string | null
-          description: string | null
-          flags: Json
-          github_owner: string
-          has_cicd: boolean | null
-          has_tests: boolean | null
-          has_typescript: boolean | null
-          host: string | null
-          id: string
-          key_dependencies: Json
-          last_synced_at: string | null
-          narrative: string | null
-          primary_language: string | null
-          repo_name: string
-          stack: Json
-          suggestions: Json
-          summary: string | null
-        }
-        Insert: {
-          architecture?: string | null
-          client_id?: string | null
-          created_at?: string | null
-          description?: string | null
-          flags?: Json
-          github_owner: string
-          has_cicd?: boolean | null
-          has_tests?: boolean | null
-          has_typescript?: boolean | null
-          host?: string | null
-          id?: string
-          key_dependencies?: Json
-          last_synced_at?: string | null
-          narrative?: string | null
-          primary_language?: string | null
-          repo_name: string
-          stack?: Json
-          suggestions?: Json
-          summary?: string | null
-        }
-        Update: {
-          architecture?: string | null
-          client_id?: string | null
-          created_at?: string | null
-          description?: string | null
-          flags?: Json
-          github_owner?: string
-          has_cicd?: boolean | null
-          has_tests?: boolean | null
-          has_typescript?: boolean | null
-          host?: string | null
-          id?: string
-          key_dependencies?: Json
-          last_synced_at?: string | null
-          narrative?: string | null
-          primary_language?: string | null
-          repo_name?: string
-          stack?: Json
-          suggestions?: Json
-          summary?: string | null
-        }
         Relationships: [
           {
-            foreignKeyName: 'tech_repos_client_id_fkey'
+            foreignKeyName: 'time_entries_client_id_fkey'
             columns: ['client_id']
             isOneToOne: false
             referencedRelation: 'clients'
