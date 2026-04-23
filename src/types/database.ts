@@ -52,6 +52,8 @@ export type Database = {
           created_at: string | null
           description: string | null
           email: string | null
+          github_owner: string | null
+          github_pat: string | null
           id: string
           mrr: number
           name: string
@@ -59,6 +61,9 @@ export type Database = {
           project_health: number
           service: string | null
           setup_fee: number | null
+          tech_profile: Json | null
+          tech_summary: string | null
+          tech_synced_at: string | null
         }
         Insert: {
           billing_type?: string | null
@@ -69,6 +74,8 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           email?: string | null
+          github_owner?: string | null
+          github_pat?: string | null
           id?: string
           mrr?: number
           name: string
@@ -76,6 +83,9 @@ export type Database = {
           project_health?: number
           service?: string | null
           setup_fee?: number | null
+          tech_profile?: Json | null
+          tech_summary?: string | null
+          tech_synced_at?: string | null
         }
         Update: {
           billing_type?: string | null
@@ -86,6 +96,8 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           email?: string | null
+          github_owner?: string | null
+          github_pat?: string | null
           id?: string
           mrr?: number
           name?: string
@@ -93,6 +105,9 @@ export type Database = {
           project_health?: number
           service?: string | null
           setup_fee?: number | null
+          tech_profile?: Json | null
+          tech_summary?: string | null
+          tech_synced_at?: string | null
         }
         Relationships: []
       }
@@ -460,6 +475,80 @@ export type Database = {
         }
         Relationships: []
       }
+      tech_repos: {
+        Row: {
+          architecture: string | null
+          client_id: string | null
+          created_at: string | null
+          description: string | null
+          flags: Json
+          github_owner: string
+          has_cicd: boolean | null
+          has_tests: boolean | null
+          has_typescript: boolean | null
+          host: string | null
+          id: string
+          key_dependencies: Json
+          last_synced_at: string | null
+          narrative: string | null
+          primary_language: string | null
+          repo_name: string
+          stack: Json
+          suggestions: Json
+          summary: string | null
+        }
+        Insert: {
+          architecture?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          flags?: Json
+          github_owner: string
+          has_cicd?: boolean | null
+          has_tests?: boolean | null
+          has_typescript?: boolean | null
+          host?: string | null
+          id?: string
+          key_dependencies?: Json
+          last_synced_at?: string | null
+          narrative?: string | null
+          primary_language?: string | null
+          repo_name: string
+          stack?: Json
+          suggestions?: Json
+          summary?: string | null
+        }
+        Update: {
+          architecture?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          flags?: Json
+          github_owner?: string
+          has_cicd?: boolean | null
+          has_tests?: boolean | null
+          has_typescript?: boolean | null
+          host?: string | null
+          id?: string
+          key_dependencies?: Json
+          last_synced_at?: string | null
+          narrative?: string | null
+          primary_language?: string | null
+          repo_name?: string
+          stack?: Json
+          suggestions?: Json
+          summary?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'tech_repos_client_id_fkey'
+            columns: ['client_id']
+            isOneToOne: false
+            referencedRelation: 'clients'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       user_preferences: {
         Row: {
           avatar_color: string | null
@@ -520,3 +609,4 @@ export type ScriveDocument = Tables<'scrive_documents'>
 export type TimeEntry = Tables<'time_entries'>
 export type ActivityLog = Tables<'activity_log'>
 export type UserPreferences = Tables<'user_preferences'>
+export type TechRepoRow = Tables<'tech_repos'>

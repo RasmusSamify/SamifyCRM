@@ -17,6 +17,8 @@ import { RemindersPage } from '@/modules/reminders/RemindersPage'
 import { MrrPage } from '@/modules/mrr/MrrPage'
 import { StatusPage } from '@/modules/status/StatusPage'
 import { OfferPage } from '@/modules/offer/OfferPage'
+import { TechOverviewPage } from '@/modules/tech/TechOverviewPage'
+import { TechClientPage } from '@/modules/tech/TechClientPage'
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -39,6 +41,8 @@ export const router = createBrowserRouter([
       { path: '/kalender', element: <CalendarPage /> },
       { path: '/paminnelser', element: <RemindersPage /> },
       { path: '/scrive', element: <ScrivePage /> },
+      { path: '/teknik', element: <TechOverviewPage /> },
+      { path: '/teknik/:clientId', element: <TechClientPage /> },
       { path: '/mrr', element: <MrrPage /> },
       {
         path: '/installningar',

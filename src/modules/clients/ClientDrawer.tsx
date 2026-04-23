@@ -20,6 +20,7 @@ import type { Client } from '@/types/database'
 import { phaseFor, statusOption } from './constants'
 import { useDeleteClient } from './queries'
 import { ClientDialog } from './ClientDialog'
+import { TechTab } from './TechTab'
 import { toast } from '@/stores/toast'
 
 interface ClientDrawerProps {
@@ -28,10 +29,11 @@ interface ClientDrawerProps {
   onClose: () => void
 }
 
-type Tab = 'overview' | 'log' | 'time' | 'profit'
+type Tab = 'overview' | 'tech' | 'log' | 'time' | 'profit'
 
 const tabs: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Översikt' },
+  { id: 'tech', label: 'Teknik' },
   { id: 'log', label: 'Logg' },
   { id: 'time', label: 'Tid' },
   { id: 'profit', label: 'Lönsamhet' },
@@ -165,6 +167,7 @@ export function ClientDrawer({ client, open, onClose }: ClientDrawerProps) {
         {/* Tab content */}
         <div className="px-6 py-5 animate-fade-in">
           {tab === 'overview' && <OverviewTab client={client} />}
+          {tab === 'tech' && <TechTab client={client} />}
           {tab === 'log' && (
             <PlaceholderTab>
               Aktivitetslogg byggs ut i nästa steg. Här kommer noter, beslut och möten.

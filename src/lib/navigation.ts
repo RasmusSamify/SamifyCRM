@@ -11,6 +11,7 @@ import {
   BellRing,
   TrendingUp,
   Settings,
+  Cpu,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -113,6 +114,14 @@ export const navRoutes: NavRoute[] = [
     icon: FileSignature,
     group: 'Planering',
     keywords: ['signing', 'e-sign'],
+  },
+  {
+    to: '/teknik',
+    label: 'Teknik',
+    description: 'Teknisk översikt av kundernas GitHub + AI-förslag',
+    icon: Cpu,
+    group: 'Analys',
+    keywords: ['tech', 'github', 'stack', 'repos', 'kod'],
   },
   {
     to: '/mrr',

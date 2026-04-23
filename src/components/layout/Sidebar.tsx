@@ -15,6 +15,7 @@ import {
   ChevronsUpDown,
   Sparkles,
   LogOut,
+  Cpu,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
@@ -64,7 +65,10 @@ const sections: NavSection[] = [
   },
   {
     title: 'Analys',
-    items: [{ to: '/mrr', label: 'MRR-historik', icon: TrendingUp }],
+    items: [
+      { to: '/teknik', label: 'Teknik', icon: Cpu },
+      { to: '/mrr', label: 'MRR-historik', icon: TrendingUp },
+    ],
   },
 ]
 
