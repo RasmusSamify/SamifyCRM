@@ -1,15 +1,15 @@
 import { Command } from 'cmdk'
 import { useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
-import { Search, Moon, Sun, ArrowRight, CornerDownLeft } from 'lucide-react'
+import { Search, Check, ArrowRight, CornerDownLeft } from 'lucide-react'
 import { useCommandPalette } from '@/stores/commandPalette'
-import { useThemeStore } from '@/stores/theme'
+import { THEMES, useThemeStore, type ThemeMeta } from '@/stores/theme'
 import { navRoutes } from '@/lib/navigation'
 
 export function CommandPalette() {
   const { open, setOpen } = useCommandPalette()
   const navigate = useNavigate()
-  const { theme, toggle: toggleTheme } = useThemeStore()
+  const { theme, setTheme } = useThemeStore()
 
   useEffect(() => {
     if (!open) return
@@ -63,20 +63,19 @@ export function CommandPalette() {
               Inga träffar.
             </Command.Empty>
 
-            {/* Quick Actions */}
+            {/* Theme picker */}
             <Command.Group
-              heading="Snabbåtgärder"
+              heading="Tema"
               className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-[10.5px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.14em] [&_[cmdk-group-heading]]:text-[var(--fg-subtle)]"
             >
-              <CommandRow
-                icon={theme === 'dark' ? Sun : Moon}
-                label={`Växla till ${theme === 'dark' ? 'ljust' : 'mörkt'} tema`}
-                value="theme toggle tema"
-                onSelect={() => {
-                  toggleTheme()
-                  setOpen(false)
-                }}
-              />
+              {THEMES.map((t) => (
+                <ThemeCommandRow
+                  key={t.id}
+                  theme={t}
+                  active={t.id === theme}
+                  onSelect={() => setTheme(t.id)}
+                />
+              ))}
             </Command.Group>
 
             {/* Navigation */}
@@ -168,6 +167,41 @@ function CommandRow({
           ⌘{shortcut}
         </kbd>
       )}
+    </Command.Item>
+  )
+}
+
+function ThemeCommandRow({
+  theme,
+  active,
+  onSelect,
+}: {
+  theme: ThemeMeta
+  active: boolean
+  onSelect: () => void
+}) {
+  return (
+    <Command.Item
+      value={`tema ${theme.id} ${theme.label} ${theme.tagline}`}
+      onSelect={onSelect}
+      className="group flex items-center gap-3 h-11 px-3 rounded-[9px] cursor-pointer text-[13.5px] text-[var(--fg-muted)] data-[selected=true]:bg-[var(--surface-2)] data-[selected=true]:text-[var(--fg)] transition-colors"
+    >
+      <div
+        className="h-7 w-7 rounded-md overflow-hidden border border-[var(--border)] shrink-0 relative"
+        style={{ background: theme.swatchBg }}
+      >
+        <div
+          className="absolute bottom-1 right-1 h-2.5 w-2.5 rounded-full"
+          style={{ background: theme.swatchAccent }}
+        />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="font-medium truncate">{theme.label}</div>
+        <div className="text-[11.5px] text-[var(--fg-subtle)] truncate mt-0.5">
+          {theme.tagline}
+        </div>
+      </div>
+      {active && <Check size={14} className="text-[var(--accent)] shrink-0" />}
     </Command.Item>
   )
 }

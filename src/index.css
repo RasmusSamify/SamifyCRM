@@ -69,40 +69,192 @@
    SEMANTIC TOKENS (theme-aware)
    ============================================================ */
 
-/* --- DARK MODE: Midnight Sapphire ---
-   Deep cobalt-indigo near-black. Reads as black at first glance,
-   reveals blue soul in the light. Signature luxury palette
-   (Rolls-Royce Black Badge, Patek Philippe dials, fine-jewelry boxes). */
-:root {
-  --bg: oklch(0.115 0.022 265);          /* midnight sapphire */
-  --bg-elevated: oklch(0.140 0.025 265);
-  --surface: oklch(0.155 0.028 265);
-  --surface-2: oklch(0.185 0.030 265);
-  --surface-3: oklch(0.225 0.032 265);
-  --surface-hover: oklch(0.210 0.031 265);
-  --border: oklch(0.95 0.02 265 / 0.08);
-  --border-strong: oklch(0.95 0.02 265 / 0.16);
+/* --- SAPPHIRE (default dark) — Midnight cobalt · amber
+   Deep cobalt-indigo near-black, reveals blue soul in the light.
+   Signature Rolls-Royce Black Badge / Patek Philippe luxury palette. */
+:root,
+:root[data-theme="sapphire"] {
+  --bg: oklch(0.128 0.022 265);
+  --bg-elevated: oklch(0.155 0.025 265);
+  --surface: oklch(0.172 0.028 265);
+  --surface-2: oklch(0.200 0.030 265);
+  --surface-3: oklch(0.240 0.032 265);
+  --surface-hover: oklch(0.225 0.031 265);
+  --border: oklch(0.95 0.02 265 / 0.09);
+  --border-strong: oklch(0.95 0.02 265 / 0.18);
   --border-focus: oklch(0.70 0.19 60 / 0.55);
 
-  --fg: oklch(0.96 0.012 265);           /* crisp off-white with cool tint */
+  --fg: oklch(0.96 0.012 265);
   --fg-muted: oklch(0.72 0.025 265);
   --fg-subtle: oklch(0.55 0.025 265);
-  --fg-inverse: oklch(0.115 0.022 265);
+  --fg-inverse: oklch(0.128 0.022 265);
 
-  --accent: oklch(0.72 0.18 62);         /* warm amber-gold, pops on navy */
+  --accent: oklch(0.72 0.18 62);
   --accent-hover: oklch(0.76 0.18 64);
   --accent-soft: oklch(0.72 0.18 62 / 0.12);
-  --accent-fg: oklch(0.115 0.022 265);
+  --accent-fg: oklch(0.128 0.022 265);
 
-  /* Champagne gold — luxury secondary for display accents */
   --gold: oklch(0.84 0.09 88);
   --gold-soft: oklch(0.84 0.09 88 / 0.12);
+
+  --glow-a: oklch(0.72 0.18 62 / 0.08);
+  --glow-b: oklch(0.40 0.20 265 / 0.14);
 }
 
-/* --- LIGHT MODE: Pearl & Cognac ---
-   Warm off-white with cognac accent. Paper-in-a-private-library vibe. */
+/* --- GRAPHITE — Warm onyx · ember
+   Brown-black charcoal with a warm ember accent. Leica / Submariner feel. */
+:root[data-theme="graphite"] {
+  --bg: oklch(0.138 0.008 50);
+  --bg-elevated: oklch(0.168 0.010 50);
+  --surface: oklch(0.188 0.012 50);
+  --surface-2: oklch(0.218 0.014 50);
+  --surface-3: oklch(0.258 0.016 50);
+  --surface-hover: oklch(0.240 0.015 50);
+  --border: oklch(0.95 0.01 50 / 0.10);
+  --border-strong: oklch(0.95 0.01 50 / 0.19);
+  --border-focus: oklch(0.75 0.17 65 / 0.55);
+
+  --fg: oklch(0.96 0.008 50);
+  --fg-muted: oklch(0.72 0.012 50);
+  --fg-subtle: oklch(0.55 0.012 50);
+  --fg-inverse: oklch(0.138 0.008 50);
+
+  --accent: oklch(0.75 0.17 65);
+  --accent-hover: oklch(0.79 0.17 67);
+  --accent-soft: oklch(0.75 0.17 65 / 0.12);
+  --accent-fg: oklch(0.138 0.008 50);
+
+  --gold: oklch(0.85 0.10 85);
+  --gold-soft: oklch(0.85 0.10 85 / 0.12);
+
+  --glow-a: oklch(0.75 0.17 65 / 0.09);
+  --glow-b: oklch(0.42 0.08 45 / 0.20);
+}
+
+/* --- NOIR — Pure black · amber
+   Neutral near-black with no color cast. Absolute stealth. */
+:root[data-theme="noir"] {
+  --bg: oklch(0.125 0.003 0);
+  --bg-elevated: oklch(0.155 0.005 0);
+  --surface: oklch(0.175 0.006 0);
+  --surface-2: oklch(0.205 0.007 0);
+  --surface-3: oklch(0.245 0.008 0);
+  --surface-hover: oklch(0.225 0.008 0);
+  --border: oklch(0.95 0 0 / 0.10);
+  --border-strong: oklch(0.95 0 0 / 0.19);
+  --border-focus: oklch(0.72 0.18 62 / 0.55);
+
+  --fg: oklch(0.96 0.003 0);
+  --fg-muted: oklch(0.72 0.005 0);
+  --fg-subtle: oklch(0.55 0.005 0);
+  --fg-inverse: oklch(0.125 0.003 0);
+
+  --accent: oklch(0.72 0.18 62);
+  --accent-hover: oklch(0.76 0.18 64);
+  --accent-soft: oklch(0.72 0.18 62 / 0.12);
+  --accent-fg: oklch(0.125 0.003 0);
+
+  --gold: oklch(0.84 0.09 88);
+  --gold-soft: oklch(0.84 0.09 88 / 0.12);
+
+  --glow-a: oklch(0.72 0.18 62 / 0.08);
+  --glow-b: oklch(0.50 0.003 0 / 0.15);
+}
+
+/* --- PLUM — Aubergine · champagne
+   Deep night-violet, lets gold accents feel regal. Château-cellar vibe. */
+:root[data-theme="plum"] {
+  --bg: oklch(0.132 0.024 320);
+  --bg-elevated: oklch(0.160 0.028 320);
+  --surface: oklch(0.180 0.032 320);
+  --surface-2: oklch(0.210 0.036 320);
+  --surface-3: oklch(0.250 0.040 320);
+  --surface-hover: oklch(0.230 0.037 320);
+  --border: oklch(0.95 0.02 320 / 0.10);
+  --border-strong: oklch(0.95 0.02 320 / 0.19);
+  --border-focus: oklch(0.80 0.13 85 / 0.55);
+
+  --fg: oklch(0.96 0.015 320);
+  --fg-muted: oklch(0.72 0.020 320);
+  --fg-subtle: oklch(0.55 0.020 320);
+  --fg-inverse: oklch(0.132 0.024 320);
+
+  --accent: oklch(0.80 0.13 85);
+  --accent-hover: oklch(0.83 0.13 87);
+  --accent-soft: oklch(0.80 0.13 85 / 0.12);
+  --accent-fg: oklch(0.132 0.024 320);
+
+  --gold: oklch(0.85 0.13 88);
+  --gold-soft: oklch(0.85 0.13 88 / 0.12);
+
+  --glow-a: oklch(0.80 0.13 85 / 0.09);
+  --glow-b: oklch(0.38 0.18 320 / 0.18);
+}
+
+/* --- EMERALD — Forest depth · gold
+   Deep evergreen/emerald. Country-library luxury. */
+:root[data-theme="emerald"] {
+  --bg: oklch(0.135 0.022 155);
+  --bg-elevated: oklch(0.162 0.026 155);
+  --surface: oklch(0.182 0.030 155);
+  --surface-2: oklch(0.212 0.034 155);
+  --surface-3: oklch(0.252 0.036 155);
+  --surface-hover: oklch(0.232 0.035 155);
+  --border: oklch(0.95 0.02 155 / 0.10);
+  --border-strong: oklch(0.95 0.02 155 / 0.19);
+  --border-focus: oklch(0.83 0.13 88 / 0.55);
+
+  --fg: oklch(0.96 0.015 155);
+  --fg-muted: oklch(0.72 0.020 155);
+  --fg-subtle: oklch(0.55 0.020 155);
+  --fg-inverse: oklch(0.135 0.022 155);
+
+  --accent: oklch(0.80 0.13 88);
+  --accent-hover: oklch(0.83 0.13 90);
+  --accent-soft: oklch(0.80 0.13 88 / 0.12);
+  --accent-fg: oklch(0.135 0.022 155);
+
+  --gold: oklch(0.85 0.13 90);
+  --gold-soft: oklch(0.85 0.13 90 / 0.12);
+
+  --glow-a: oklch(0.80 0.13 88 / 0.08);
+  --glow-b: oklch(0.40 0.15 155 / 0.18);
+}
+
+/* --- TEAL — Petrol night · amber
+   Deep teal-petrol, maritime luxury. */
+:root[data-theme="teal"] {
+  --bg: oklch(0.130 0.025 210);
+  --bg-elevated: oklch(0.157 0.028 210);
+  --surface: oklch(0.177 0.032 210);
+  --surface-2: oklch(0.207 0.036 210);
+  --surface-3: oklch(0.247 0.038 210);
+  --surface-hover: oklch(0.227 0.037 210);
+  --border: oklch(0.95 0.02 210 / 0.10);
+  --border-strong: oklch(0.95 0.02 210 / 0.19);
+  --border-focus: oklch(0.75 0.17 65 / 0.55);
+
+  --fg: oklch(0.96 0.015 210);
+  --fg-muted: oklch(0.72 0.020 210);
+  --fg-subtle: oklch(0.55 0.020 210);
+  --fg-inverse: oklch(0.130 0.025 210);
+
+  --accent: oklch(0.75 0.17 65);
+  --accent-hover: oklch(0.79 0.17 67);
+  --accent-soft: oklch(0.75 0.17 65 / 0.12);
+  --accent-fg: oklch(0.130 0.025 210);
+
+  --gold: oklch(0.84 0.10 85);
+  --gold-soft: oklch(0.84 0.10 85 / 0.12);
+
+  --glow-a: oklch(0.75 0.17 65 / 0.08);
+  --glow-b: oklch(0.40 0.15 210 / 0.18);
+}
+
+/* --- LIGHT / PEARL — Warm paper · cognac
+   Off-white private-library paper with cognac accent. */
 :root[data-theme="light"] {
-  --bg: oklch(0.985 0.004 90);           /* warm pearl */
+  --bg: oklch(0.985 0.004 90);
   --bg-elevated: oklch(1 0 0);
   --surface: oklch(1 0 0);
   --surface-2: oklch(0.965 0.006 85);
@@ -117,13 +269,16 @@
   --fg-subtle: oklch(0.60 0.015 265);
   --fg-inverse: oklch(1 0 0);
 
-  --accent: oklch(0.58 0.18 55);         /* deeper cognac on light */
+  --accent: oklch(0.58 0.18 55);
   --accent-hover: oklch(0.52 0.18 53);
   --accent-soft: oklch(0.58 0.18 55 / 0.10);
   --accent-fg: oklch(1 0 0);
 
   --gold: oklch(0.65 0.10 85);
   --gold-soft: oklch(0.65 0.10 85 / 0.14);
+
+  --glow-a: oklch(0.58 0.18 55 / 0.06);
+  --glow-b: oklch(0.85 0.05 90 / 0.40);
 }
 
 /* ============================================================
@@ -160,7 +315,8 @@ body {
   position: relative;
 }
 
-/* Ambient sapphire+amber glow — gives the UI a luxurious sense of atmosphere */
+/* Ambient glow — two radial gradients driven by per-theme variables
+   (--glow-a top-right, --glow-b bottom-left) */
 body::before {
   content: "";
   position: fixed;
@@ -168,14 +324,8 @@ body::before {
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(ellipse 60% 40% at 85% 0%, oklch(0.72 0.18 62 / 0.08), transparent 70%),
-    radial-gradient(ellipse 50% 50% at 0% 100%, oklch(0.40 0.20 265 / 0.14), transparent 70%);
-}
-
-:root[data-theme="light"] body::before {
-  background:
-    radial-gradient(ellipse 60% 40% at 85% 0%, oklch(0.58 0.18 55 / 0.06), transparent 70%),
-    radial-gradient(ellipse 50% 50% at 0% 100%, oklch(0.85 0.05 90 / 0.40), transparent 70%);
+    radial-gradient(ellipse 60% 40% at 85% 0%, var(--glow-a), transparent 70%),
+    radial-gradient(ellipse 50% 50% at 0% 100%, var(--glow-b), transparent 70%);
 }
 
 #root {
