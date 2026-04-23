@@ -16,10 +16,12 @@ import { CalendarPage } from '@/modules/calendar/CalendarPage'
 import { RemindersPage } from '@/modules/reminders/RemindersPage'
 import { MrrPage } from '@/modules/mrr/MrrPage'
 import { StatusPage } from '@/modules/status/StatusPage'
+import { OfferPage } from '@/modules/offer/OfferPage'
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   { path: '/status/:token', element: <StatusPage /> },
+  { path: '/offer/:token', element: <OfferPage /> },
   {
     element: (
       <ProtectedRoute>

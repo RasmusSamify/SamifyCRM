@@ -77,12 +77,12 @@ export function QuotesPage() {
       render: (q) =>
         q.public_token ? (
           <a
-            href={`/status/${q.public_token}`}
+            href={`/offer/${q.public_token}`}
             target="_blank"
             rel="noreferrer noopener"
             onClick={(e) => e.stopPropagation()}
             className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--fg-subtle)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] transition-colors"
-            aria-label="Öppna publik länk"
+            aria-label="Öppna publik offert"
           >
             <ExternalLink size={13} />
           </a>

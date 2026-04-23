@@ -16,6 +16,13 @@ const STATUSES = [
   { value: 'declined', label: 'Avböjd' },
 ]
 
+function generatePublicToken(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID().replace(/-/g, '').slice(0, 24)
+  }
+  return Array.from({ length: 24 }, () => Math.floor(Math.random() * 36).toString(36)).join('')
+}
+
 interface QuoteItem {
   name: string
   desc?: string
@@ -101,6 +108,9 @@ export function QuoteDialog({ open, onClose, initial }: QuoteDialogProps) {
         status,
         note: note || null,
         items: cleanItems as unknown as Json,
+        ...(initial?.public_token
+          ? {}
+          : { public_token: generatePublicToken() }),
       })
       toast.success(initial ? 'Offert uppdaterad' : 'Offert skapad')
       onClose()
