@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Plus, Search, Users as UsersIcon } from 'lucide-react'
 import { PageShell } from '@/components/layout/PageShell'
 import { Button } from '@/components/ui/Button'
@@ -9,20 +10,57 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Progress } from '@/components/ui/Progress'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { cn } from '@/lib/cn'
 import { formatSEK } from '@/lib/format'
 import { useClients } from './queries'
 import { CLIENT_STATUS_OPTIONS, phaseFor, statusOption } from './constants'
 import { ClientDialog } from './ClientDialog'
 import { ClientDrawer } from './ClientDrawer'
+import { ClientDetailPanel } from './ClientDetailPanel'
 import type { Client } from '@/types/database'
+
+function useIsLargeViewport() {
+  const [isLarge, setIsLarge] = useState(() =>
+    typeof window !== 'undefined'
+      ? window.matchMedia('(min-width: 1024px)').matches
+      : true,
+  )
+  useEffect(() => {
+    const mql = window.matchMedia('(min-width: 1024px)')
+    const onChange = (e: MediaQueryListEvent) => setIsLarge(e.matches)
+    mql.addEventListener('change', onChange)
+    return () => mql.removeEventListener('change', onChange)
+  }, [])
+  return isLarge
+}
 
 export function ClientsPage() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<string>('all')
   const [creating, setCreating] = useState(false)
-  const [selected, setSelected] = useState<Client | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const isLarge = useIsLargeViewport()
 
   const { data: clients, isLoading } = useClients()
+
+  const clientIdParam = searchParams.get('client')
+  const selected = useMemo(
+    () =>
+      clientIdParam ? clients?.find((c) => c.id === clientIdParam) ?? null : null,
+    [clients, clientIdParam],
+  )
+
+  const selectClient = (client: Client | null) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        if (client) next.set('client', client.id)
+        else next.delete('client')
+        return next
+      },
+      { replace: true },
+    )
+  }
 
   const filtered = useMemo(() => {
     if (!clients) return []
@@ -44,7 +82,9 @@ export function ClientsPage() {
     [filtered],
   )
 
-  const columns: Column<Client>[] = [
+  const splitMode = isLarge && !!selected
+
+  const allColumns: Column<Client>[] = [
     {
       key: 'name',
       header: 'Kund',
@@ -106,6 +146,12 @@ export function ClientsPage() {
     },
   ]
 
+  // When the detail panel is open alongside the list, drop the wider columns
+  // to keep the list readable in its narrower column.
+  const columns = splitMode
+    ? allColumns.filter((c) => c.key === 'name' || c.key === 'status' || c.key === 'mrr')
+    : allColumns
+
   return (
     <PageShell
       title="Kunder"
@@ -121,65 +167,87 @@ export function ClientsPage() {
         </Button>
       }
     >
-      {/* Filters */}
-      <div className="flex items-center gap-2 mb-4">
-        <div className="relative flex-1 max-w-md">
-          <Search
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--fg-subtle)] pointer-events-none"
-          />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Sök kund, kontakt, e-post…"
-            className="pl-9"
+      <div
+        className={cn(
+          'gap-5',
+          splitMode
+            ? 'grid grid-cols-[minmax(0,1fr)_minmax(420px,560px)] items-start'
+            : 'block',
+        )}
+      >
+        {/* List column */}
+        <div className="min-w-0">
+          {/* Filters */}
+          <div className="flex items-center gap-2 mb-4">
+            <div className="relative flex-1 max-w-md">
+              <Search
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--fg-subtle)] pointer-events-none"
+              />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Sök kund, kontakt, e-post…"
+                className="pl-9"
+              />
+            </div>
+            <div className="w-[180px]">
+              <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+                <option value="all">Alla statusar</option>
+                {CLIENT_STATUS_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
+
+          <DataTable
+            columns={columns}
+            rows={filtered}
+            rowKey={(c) => c.id}
+            onRowClick={(c) => selectClient(c.id === selected?.id ? null : c)}
+            activeRow={(c) => c.id === selected?.id}
+            loading={isLoading}
+            empty={
+              <EmptyState
+                icon={UsersIcon}
+                title={clients?.length ? 'Inga träffar' : 'Inga kunder än'}
+                description={
+                  clients?.length
+                    ? 'Prova att rensa filter eller söka på något annat.'
+                    : 'Lägg till din första kund för att börja.'
+                }
+                action={
+                  !clients?.length && (
+                    <Button onClick={() => setCreating(true)}>
+                      <Plus size={14} />
+                      Skapa kund
+                    </Button>
+                  )
+                }
+              />
+            }
           />
         </div>
-        <div className="w-[180px]">
-          <Select value={status} onChange={(e) => setStatus(e.target.value)}>
-            <option value="all">Alla statusar</option>
-            {CLIENT_STATUS_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </Select>
-        </div>
+
+        {/* Inline detail panel (lg+ only) */}
+        {splitMode && selected && (
+          <ClientDetailPanel client={selected} onClose={() => selectClient(null)} />
+        )}
       </div>
 
-      <DataTable
-        columns={columns}
-        rows={filtered}
-        rowKey={(c) => c.id}
-        onRowClick={setSelected}
-        loading={isLoading}
-        empty={
-          <EmptyState
-            icon={UsersIcon}
-            title={clients?.length ? 'Inga träffar' : 'Inga kunder än'}
-            description={
-              clients?.length
-                ? 'Prova att rensa filter eller söka på något annat.'
-                : 'Lägg till din första kund för att börja.'
-            }
-            action={
-              !clients?.length && (
-                <Button onClick={() => setCreating(true)}>
-                  <Plus size={14} />
-                  Skapa kund
-                </Button>
-              )
-            }
-          />
-        }
-      />
-
       <ClientDialog open={creating} onClose={() => setCreating(false)} />
-      <ClientDrawer
-        client={selected}
-        open={!!selected}
-        onClose={() => setSelected(null)}
-      />
+
+      {/* Overlay drawer for narrow viewports only */}
+      {!isLarge && (
+        <ClientDrawer
+          client={selected}
+          open={!!selected}
+          onClose={() => selectClient(null)}
+        />
+      )}
     </PageShell>
   )
 }

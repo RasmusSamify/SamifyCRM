@@ -15,6 +15,7 @@ interface DataTableProps<T> {
   rows: T[]
   rowKey: (row: T) => string
   onRowClick?: (row: T) => void
+  activeRow?: (row: T) => boolean
   empty?: ReactNode
   loading?: boolean
   loadingRows?: number
@@ -25,6 +26,7 @@ export function DataTable<T>({
   rows,
   rowKey,
   onRowClick,
+  activeRow,
   empty,
   loading,
   loadingRows = 6,
@@ -83,7 +85,9 @@ export function DataTable<T>({
                     </td>
                   </tr>
                 )
-                : rows.map((row) => (
+                : rows.map((row) => {
+                    const isActive = activeRow?.(row) ?? false
+                    return (
                     <tr
                       key={rowKey(row)}
                       onClick={onRowClick ? () => onRowClick(row) : undefined}
@@ -91,6 +95,7 @@ export function DataTable<T>({
                         'group transition-colors',
                         onRowClick &&
                           'cursor-pointer hover:bg-[var(--surface-2)]/50',
+                        isActive && 'bg-[color-mix(in_oklch,var(--accent)_8%,transparent)] hover:bg-[color-mix(in_oklch,var(--accent)_10%,transparent)]',
                       )}
                     >
                       {columns.map((col, j) => (
@@ -109,7 +114,8 @@ export function DataTable<T>({
                         </td>
                       ))}
                     </tr>
-                  ))}
+                    )
+                  })}
           </tbody>
         </table>
       </div>
